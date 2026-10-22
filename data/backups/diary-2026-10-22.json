@@ -6,18 +6,6 @@
   },
   "entries": [
     {
-      "id": "mvk11k86fxlouc",
-      "date": "2026-10-23",
-      "title": "",
-      "body": "hi itaktakimaos",
-      "mood": "fun",
-      "weather": "cloudy",
-      "tags": [],
-      "favorite": false,
-      "createdAt": "2026-10-22T21:02:18.534Z",
-      "updatedAt": "2026-10-22T21:02:18.534Z"
-    },
-    {
       "id": "welcome0001",
       "date": "2026-10-22",
       "title": "はじめてのにっき :sakura:",
@@ -58,7 +46,13 @@
       "updatedAt": "2026-10-22T00:00:00.000Z"
     }
   ],
-  "deleted": [],
+  "deleted": [
+    {
+      "id": "mvk11k86fxlouc",
+      "at": "2026-10-22T21:03:37.074Z",
+      "kind": "entry"
+    }
+  ],
   "lock": {
     "salt": "bce770ed0dd131307a843e8c",
     "hash": "5b328545f7513f31cd3afdda8fc9c99caab3189361a80c767ae9fd1e9d222064",
@@ -66,6 +60,6 @@
     "iter": 2000,
     "setAt": "2026-10-23T00:00:00.000Z"
   },
-  "updatedAt": "2026-10-22T21:02:19.123Z",
-  "savedAt": "2026-10-22T21:02:19.123Z"
+  "updatedAt": "2026-10-22T21:03:37.835Z",
+  "savedAt": "2026-10-22T21:03:37.835Z"
 }
