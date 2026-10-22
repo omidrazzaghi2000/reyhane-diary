@@ -1,8 +1,9 @@
 {
   "app": "reyhane-diary",
-  "version": 1,
-  "exportedAt": "2026-10-22T00:00:00.000Z",
-  "profile": { "name": "レイハーネ" },
+  "version": 2,
+  "profile": {
+    "name": "レイハーネ"
+  },
   "entries": [
     {
       "id": "welcome0001",
@@ -11,15 +12,48 @@
       "body": "こんにちは！わたしは レイハーネです。\nきょうから にほんごで にっきを かきます。\nたのしみ！ (๑˃̵ᴗ˂̵) :neko:",
       "mood": "happy",
       "weather": "sunny",
-      "tags": ["はじめて"],
+      "tags": [
+        "はじめて"
+      ],
       "favorite": true,
       "createdAt": "2026-10-22T00:00:00.000Z",
       "updatedAt": "2026-10-22T00:00:00.000Z"
     }
   ],
   "words": [
-    { "id": "w0001", "word": "日記", "reading": "にっき", "meaning": "diary / دفتر خاطرات", "createdAt": "2026-10-22T00:00:00.000Z" },
-    { "id": "w0002", "word": "桜", "reading": "さくら", "meaning": "cherry blossom / شکوفه گیلاس", "createdAt": "2026-10-22T00:00:00.000Z" },
-    { "id": "w0003", "word": "楽しい", "reading": "たのしい", "meaning": "fun / شاد، خوش", "createdAt": "2026-10-22T00:00:00.000Z" }
-  ]
+    {
+      "id": "w0001",
+      "word": "日記",
+      "reading": "にっき",
+      "meaning": "diary / دفتر خاطرات",
+      "createdAt": "2026-10-22T00:00:00.000Z",
+      "updatedAt": "2026-10-22T00:00:00.000Z"
+    },
+    {
+      "id": "w0002",
+      "word": "桜",
+      "reading": "さくら",
+      "meaning": "cherry blossom / شکوفه گیلاس",
+      "createdAt": "2026-10-22T00:00:00.000Z",
+      "updatedAt": "2026-10-22T00:00:00.000Z"
+    },
+    {
+      "id": "w0003",
+      "word": "楽しい",
+      "reading": "たのしい",
+      "meaning": "fun / شاد، خوش",
+      "createdAt": "2026-10-22T00:00:00.000Z",
+      "updatedAt": "2026-10-22T00:00:00.000Z"
+    }
+  ],
+  "deleted": [],
+  "lock": {
+    "salt": "bce770ed0dd131307a843e8c",
+    "hash": "5b328545f7513f31cd3afdda8fc9c99caab3189361a80c767ae9fd1e9d222064",
+    "hint": "4つの おなじ すうじ",
+    "iter": 2000,
+    "setAt": "2026-10-23T00:00:00.000Z"
+  },
+  "updatedAt": "2026-10-23T00:00:00.000Z",
+  "savedAt": "2026-10-23T00:00:00.000Z"
 }
