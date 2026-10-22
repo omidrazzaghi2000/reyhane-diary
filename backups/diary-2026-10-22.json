@@ -1,0 +1,25 @@
+{
+  "app": "reyhane-diary",
+  "version": 1,
+  "exportedAt": "2026-10-22T00:00:00.000Z",
+  "profile": { "name": "レイハーネ" },
+  "entries": [
+    {
+      "id": "welcome0001",
+      "date": "2026-10-22",
+      "title": "はじめてのにっき :sakura:",
+      "body": "こんにちは！わたしは レイハーネです。\nきょうから にほんごで にっきを かきます。\nたのしみ！ (๑˃̵ᴗ˂̵) :neko:",
+      "mood": "happy",
+      "weather": "sunny",
+      "tags": ["はじめて"],
+      "favorite": true,
+      "createdAt": "2026-10-22T00:00:00.000Z",
+      "updatedAt": "2026-10-22T00:00:00.000Z"
+    }
+  ],
+  "words": [
+    { "id": "w0001", "word": "日記", "reading": "にっき", "meaning": "diary / دفتر خاطرات", "createdAt": "2026-10-22T00:00:00.000Z" },
+    { "id": "w0002", "word": "桜", "reading": "さくら", "meaning": "cherry blossom / شکوفه گیلاس", "createdAt": "2026-10-22T00:00:00.000Z" },
+    { "id": "w0003", "word": "楽しい", "reading": "たのしい", "meaning": "fun / شاد، خوش", "createdAt": "2026-10-22T00:00:00.000Z" }
+  ]
+}
