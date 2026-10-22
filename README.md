@@ -11,6 +11,7 @@
 - **خاطرات:** نمای فهرست یا **تقویم**، جستجو، فیلتر مورد علاقه، خواندن با مُهر (判子) به اسم ریحانه، ویرایش، حذف با امکان «بازگردانی».
 - **دفتر واژه‌ها:** واژه + تلفظ + معنی، و حالت **فلش‌کارت** برای تمرین.
 - **تنظیمات:** نام، زبان رابط (日本語 / فارسی / English)، ۴ تم (ساکورا، ماچا، سورا، یوزورا/شب)، گلبرگ‌های در حال ریزش، پشتیبان‌گیری، همگام‌سازی گیت‌هاب.
+- **حالت ویرایش با رمز:** بازدیدکننده‌ها فقط می‌خوانند؛ نوشتن و ویرایش فقط با رمز ریحانه.
 - **PWA:** قابل نصب روی گوشی/تبلت، آفلاین هم کار می‌کند.
 - دسترس‌پذیری: کنتراست مناسب، ناوبری با کیبورد، تاچ‌تارگت ≥۴۴px، احترام به `prefers-reduced-motion`.
 
@@ -21,6 +22,24 @@
 1. **localStorage مرورگر** (اصلی): کلید `reyhane.diary.v1`. هر روز قبل از اولین تغییر، یک **اسنپ‌شات خودکار** گرفته می‌شود (۵ تای آخر نگه داشته می‌شود) و از تنظیمات قابل بازگردانی است.
 2. **فایل JSON:** از تنظیمات → «ذخیره در فایل». همان فایل با «بازیابی از فایل» برمی‌گردد (ادغام هوشمند؛ نسخه‌ی جدیدتر هر خاطره می‌ماند).
 3. **گیت‌هاب به‌عنوان دیتابیس:** اپ با GitHub Contents API فایل `data/diary.json` را در ریپو می‌نویسد و هر بار یک کپی تاریخ‌دار هم در `data/backups/` می‌گذارد. ورک‌فلو `backup.yml` هم خودش هر بار که `data/diary.json` تغییر کند (و هر یکشنبه) یک کپی در پوشه‌ی `backups/` می‌سازد. گزینه‌ی «ارسال خودکار بعد از هر ذخیره» هم هست.
+
+## 🔒 حالت ویرایش (فقط ریحانه)
+
+سایت برای همه **فقط‌خواندنی** است؛ نوشتن، ویرایش، حذف، بازیابی از فایل، همگام‌سازی گیت‌هاب و «پاک کردن همه» فقط بعد از وارد کردن رمز ریحانه باز می‌شوند.
+
+- **ساخت رمز:** تنظیمات → «حالت ویرایش» → رمز جدید + تکرار + (اختیاری) راهنمایی → ذخیره. حداقل ۴ حرف.
+- **باز کردن قفل:** دکمه‌ی قفل در هدر، بنر بالای خانه، یا هر وقت روی «نوشتن» بزنی. تیک «روی این دستگاه به خاطر بسپار» یعنی دفعه‌ی بعد رمز نمی‌خواهد؛ بدون تیک، با بستن تب دوباره قفل می‌شود.
+- **قفل کردن:** همان دکمه‌ی هدر.
+- رمز به‌صورت هش (SHA-256 با salt و تکرار) ذخیره می‌شود، هرگز خود رمز ذخیره نمی‌شود. هش همراه داده‌ها به فایل پشتیبان و `data/diary.json` می‌رود؛ پس دستگاه جدیدی که از گیت‌هاب بازیابی می‌کند هم قفل است. **بعد از ساخت رمز یک‌بار «ارسال به گیت‌هاب» بزنید** تا نسخه‌ی عمومی هم قفل شود.
+- این یک قفلِ رابط برای دفترچه‌ی یک بچه است، نه رمزنگاری داده: کسی که به مرورگر همان دستگاه دسترسی داشته باشد می‌تواند داده‌ها را ببیند.
+
+**اگر رمز فراموش شد** (با کمک یک بزرگ‌تر): در همان مرورگر، DevTools → Console و این دستور را بزنید، بعد صفحه را رفرش کنید:
+
+```js
+(s=>{s.lock=null;localStorage.setItem('reyhane.diary.v1',JSON.stringify(s))})(JSON.parse(localStorage.getItem('reyhane.diary.v1')))
+```
+
+سپس رمز جدید بسازید و دوباره به گیت‌هاب بفرستید.
 
 ## 🚀 اجرا
 
@@ -43,6 +62,7 @@ js/i18n.js            دیکشنری ۳ زبانه
 js/icons.js           آیکون‌ها، صورتک‌ها، استیکرها، ماسکوت، درخت شکوفه (همه SVG)
 js/store.js           لایه‌ی ذخیره‌سازی (localStorage، اسنپ‌شات، ایمپورت/اکسپورت/ادغام)
 js/github.js          همگام‌سازی با GitHub Contents API
+js/auth.js            قفل ویرایش (هش رمز، باز/بسته کردن)
 js/app.js             رابط کاربری و منطق صفحه‌ها
 data/diary.json       «دیتابیس» در ریپو (اپ آن را می‌خواند و می‌نویسد)
 backups/              کپی‌های تاریخ‌دار (توسط Actions)
@@ -60,6 +80,6 @@ manifest.webmanifest, sw.js, assets/   PWA
 
 ## English
 
-A kawaii, claymorphism-styled personal diary web app for Reyhane (age 11–12) to write her daily life **in Japanese**. No backend: everything lives in the browser's localStorage, with JSON export/import, daily auto-snapshots, and optional sync to a GitHub repository used as the database (with dated backup copies and a backup workflow). Installable PWA, works offline, UI in Japanese / Persian / English, four themes, accessible (contrast, keyboard, 44px targets, reduced-motion).
+A kawaii, claymorphism-styled personal diary web app for Reyhane (age 11–12) to write her daily life **in Japanese**. No backend: everything lives in the browser's localStorage, with JSON export/import, daily auto-snapshots, and optional sync to a GitHub repository used as the database (with dated backup copies and a backup workflow). Password-protected editor mode (visitors read, only Reyhane writes), installable PWA, works offline, UI in Japanese / Persian / English, four themes, accessible (contrast, keyboard, 44px targets, reduced-motion).
 
 Run locally with `python3 -m http.server 8080`, deploy via GitHub Pages — see [DEPLOY.md](DEPLOY.md).

@@ -512,3 +512,22 @@ html[dir="rtl"] textarea, html[dir="rtl"] #entryTitle, html[dir="rtl"] .word-tex
   direction: ltr; text-align: left; unicode-bidi: isolate; font-family: var(--font-ja);
 }
 html[dir="rtl"] .hero-title { text-align: right; }
+
+/* ---------- Editor lock ---------- */
+html[data-locked="1"] [data-edit-only] { display: none !important; }
+.lock-btn { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 8px 14px; border: 0; border-radius: var(--r-pill); background: var(--secondary-soft); color: var(--secondary-ink); font-weight: 800; font-size: var(--fs-sm); cursor: pointer; box-shadow: inset -3px -3px 6px var(--clay-lo), inset 3px 3px 6px var(--clay-hi); transition: transform var(--t-fast) var(--ease-spring), background var(--t-fast); }
+.lock-btn svg { width: 20px; height: 20px; }
+.lock-btn:hover { transform: scale(1.04); }
+.lock-btn[aria-pressed="true"] { background: var(--accent-soft); color: var(--text); }
+:root[data-theme="yozora"] .lock-btn { color: var(--secondary); }
+:root[data-theme="yozora"] .lock-btn[aria-pressed="true"] { color: var(--accent); }
+@media (max-width: 559px) { .lock-label { display: none; } .lock-btn { padding: 8px 12px; } }
+.lock-banner { display: flex; align-items: center; gap: var(--s-3); flex-wrap: wrap; padding: var(--s-4) var(--s-5); margin-bottom: var(--s-4); background: var(--accent-soft); font-weight: 700; }
+.lock-banner > span:first-child { display: grid; color: #B07A00; }
+.lock-banner > span:first-child svg { width: 24px; height: 24px; }
+.lock-banner > span:nth-child(2) { flex: 1; min-width: 200px; }
+:root[data-theme="yozora"] .lock-banner > span:first-child { color: var(--accent); }
+.lock-state { font-weight: 700; font-size: var(--fs-sm); margin: var(--s-2) 0 var(--s-4); display: flex; align-items: center; gap: 8px; }
+.lock-state::before { content: ""; width: 10px; height: 10px; border-radius: 50%; background: var(--text-muted); }
+.lock-state.is-on::before { background: var(--success); }
+.lock-state.is-off::before { background: var(--accent); }

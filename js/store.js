@@ -14,6 +14,7 @@
     draft: null,
     seeded: false,
     earned: [],
+    lock: null,
   });
 
   const listeners = new Set();
@@ -33,6 +34,7 @@
         words: Array.isArray(parsed.words) ? parsed.words : [],
         snapshots: Array.isArray(parsed.snapshots) ? parsed.snapshots : [],
         earned: Array.isArray(parsed.earned) ? parsed.earned : [],
+        lock: parsed.lock && parsed.lock.hash ? parsed.lock : null,
       };
     } catch (e) {
       console.warn('store: could not parse, starting fresh', e);
@@ -118,19 +120,23 @@
   /* ---- Profile / settings ---- */
   function setProfile(patch) { Object.assign(state.profile, patch); save(); }
   function setGithub(patch) { Object.assign(state.github, patch); save(); }
+  function setLock(lock) { state.lock = lock && lock.hash ? lock : null; save(); }
   function setDraft(draft) { state.draft = draft; try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {} }
   function markEarned(ids) { let changed = false; ids.forEach(id => { if (!state.earned.includes(id)) { state.earned.push(id); changed = true; } }); if (changed) save(); return changed; }
 
   /* ---- Export / import / merge ---- */
   function exportPayload() {
-    return { app: 'reyhane-diary', version: 1, exportedAt: nowISO(), profile: { name: state.profile.name }, entries: state.entries, words: state.words };
+    const payload = { app: 'reyhane-diary', version: 1, exportedAt: nowISO(), profile: { name: state.profile.name }, entries: state.entries, words: state.words };
+    if (state.lock) payload.lock = state.lock;
+    return payload;
   }
   function parsePayload(obj) {
     if (!obj || typeof obj !== 'object') return null;
     const entries = Array.isArray(obj.entries) ? obj.entries.map(normalizeEntry) : [];
     const words = Array.isArray(obj.words) ? obj.words.filter(w => w && w.word).map(w => ({ id: w.id || uid(), word: String(w.word), reading: String(w.reading || ''), meaning: String(w.meaning || ''), createdAt: w.createdAt || nowISO() })) : [];
     if (!Array.isArray(obj.entries) && !Array.isArray(obj.words)) return null;
-    return { entries, words, profile: obj.profile || null };
+    const lock = obj.lock && typeof obj.lock.hash === 'string' && typeof obj.lock.salt === 'string' ? obj.lock : null;
+    return { entries, words, profile: obj.profile || null, lock };
   }
   /* newest updatedAt wins for same id */
   function merge(payload) {
@@ -147,11 +153,12 @@
     const wKeys = new Set(state.words.map(w => w.word + '|' + w.meaning));
     payload.words.forEach(w => { if (!wIds.has(w.id) && !wKeys.has(w.word + '|' + w.meaning)) { state.words.push(w); added++; } });
     if (payload.profile && payload.profile.name && !state.entries.length) state.profile.name = payload.profile.name;
+    if (payload.lock && !state.lock) state.lock = payload.lock; // adopt the owner's lock on a fresh device
     save();
     return added;
   }
   function wipe() {
-    const keep = { profile: state.profile, github: state.github };
+    const keep = { profile: state.profile, github: state.github, lock: state.lock };
     state = { ...defaults(), ...keep, seeded: true };
     save();
   }
@@ -163,7 +170,7 @@
     save, uid, todayISO, nowISO,
     addEntry, updateEntry, deleteEntry, restoreEntry, getEntry,
     addWord, deleteWord,
-    setProfile, setGithub, setDraft, markEarned,
+    setProfile, setGithub, setLock, setDraft, markEarned,
     exportPayload, parsePayload, merge, wipe, snapshot, storageKB,
   };
 })();

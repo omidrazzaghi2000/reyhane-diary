@@ -113,7 +113,7 @@
   const VIEWS = ['home', 'write', 'diary', 'words', 'settings'];
   const NAV_ICON = { home: 'home', write: 'pen', diary: 'book', words: 'abc', settings: 'settings' };
   function renderNav() {
-    const html = VIEWS.map(v => `<a class="nav-btn" href="#${v}" data-nav="${v}">${ICONS.get(NAV_ICON[v])}<span>${esc(t('nav.' + v))}</span></a>`).join('');
+    const html = VIEWS.map(v => `<a class="nav-btn" href="#${v}" data-nav="${v}" ${v === 'write' ? 'data-edit-only' : ''}>${ICONS.get(NAV_ICON[v])}<span>${esc(t('nav.' + v))}</span></a>`).join('');
     $('#sidenav').innerHTML = html; $('#bottomnav').innerHTML = html;
     markNav();
   }
@@ -123,7 +123,8 @@
     const hash = location.hash.replace('#', '') || 'home';
     const [view, arg] = hash.split('/');
     if (view === 'entry' && arg) { openEntry(arg); return; }
-    const v = VIEWS.includes(view) ? view : 'home';
+    let v = VIEWS.includes(view) ? view : 'home';
+    if (v === 'write' && !Auth.canEdit()) { openUnlock(() => { if (location.hash === '#' + hash) route(); else location.hash = hash; }); v = 'home'; }
     currentView = v;
     $$('.view').forEach(s => { s.hidden = s.dataset.view !== v; });
     markNav();
@@ -135,7 +136,7 @@
     window.scrollTo({ top: 0, behavior: reducedMotion.matches ? 'auto' : 'smooth' });
   }
   function renderView(v) { ({ home: renderHome, write: renderWriteStatic, diary: renderDiary, words: renderWords, settings: renderSettings })[v](); }
-  function renderAll() { renderHome(); renderWriteStatic(); renderDiary(); renderWords(); renderSettings(); updateBrand(); }
+  function renderAll() { applyLockUI(); renderHome(); renderWriteStatic(); renderDiary(); renderWords(); renderSettings(); updateBrand(); }
   function updateBrand() { const iso = Store.todayISO(); $('#brandDate').textContent = I18N.lang === 'fa' ? fmtFa(iso) : fmtJa(iso); }
 
   /* ---------- HOME ---------- */
@@ -193,7 +194,7 @@
         <div class="read-meta"><span>${esc(fmtDate(e.date))}</span><span>·</span>${ICONS.weather[e.weather] || ''}<span>${esc(t('wx.' + e.weather))}</span><span>·</span><span>${esc(t('mood.' + e.mood))}</span></div></div></div>
       <div class="read-body">${renderBody(e.body)}<span class="hanko" aria-hidden="true">${esc((Store.state.profile.name || 'レイハーネ').slice(0, 4))}</span></div>
       <div class="entry-tags" style="margin-top:12px">${e.tags.map(tag => `<span class="tag">#${esc(tag)}</span>`).join('')}</div>
-      <div class="read-actions">
+      <div class="read-actions" data-edit-only>
         <button type="button" class="btn btn-ghost" id="readDelete">${ICONS.get('trash')}<span>${esc(t('diary.delete'))}</span></button>
         <div class="row gap"><button type="button" class="btn btn-soft" id="readFav">${ICONS.get(e.favorite ? 'heartFill' : 'heart')}<span>${esc(t('write.favorite'))}</span></button>
         <button type="button" class="btn btn-primary" id="readEdit">${ICONS.get('edit')}<span>${esc(t('diary.edit'))}</span></button></div>
@@ -274,6 +275,7 @@
   $('#clearBtn').addEventListener('click', async () => { if (!body.value && !$('#entryTitle').value) return; if (await confirmDlg(t('write.clear'), t('write.clearConfirm'))) { const wasEditing = editingId; resetWriteForm(); if (wasEditing) beginEdit(wasEditing), fillForm({ ...Store.getEntry(wasEditing), body: '', title: '' }); Store.setDraft(null); } });
   form.addEventListener('submit', ev => {
     ev.preventDefault();
+    if (!Auth.canEdit()) { openUnlock(); return; }
     const data = readForm();
     if (!data.date) { toast(t('write.needDate'), { type: 'err' }); $('#entryDate').focus(); return; }
     if (!data.body.trim()) { $('#bodyError').textContent = t('write.needBody'); $('#bodyError').hidden = false; body.setAttribute('aria-invalid', 'true'); body.focus(); return; }
@@ -336,7 +338,7 @@
   function renderWords() {
     const w = Store.state.words;
     $('#wordsCount').textContent = t('words.count', { n: w.length });
-    $('#wordsList').innerHTML = w.length ? w.map(x => `<div class="clay word-card"><div class="word-main"><div class="word-text">${esc(x.word)}</div>${x.reading ? `<div class="word-reading">${esc(x.reading)}</div>` : ''}<div class="word-meaning">${esc(x.meaning)}</div></div><button type="button" class="icon-btn is-danger" data-del-word="${x.id}" aria-label="${esc(t('diary.delete'))}">${ICONS.get('trash')}</button></div>`).join('') : `<div class="empty">${ICONS.stickers.dango}<p>${esc(t('words.empty'))}</p></div>`;
+    $('#wordsList').innerHTML = w.length ? w.map(x => `<div class="clay word-card"><div class="word-main"><div class="word-text">${esc(x.word)}</div>${x.reading ? `<div class="word-reading">${esc(x.reading)}</div>` : ''}<div class="word-meaning">${esc(x.meaning)}</div></div><button type="button" class="icon-btn is-danger" data-edit-only data-del-word="${x.id}" aria-label="${esc(t('diary.delete'))}">${ICONS.get('trash')}</button></div>`).join('') : `<div class="empty">${ICONS.stickers.dango}<p>${esc(t('words.empty'))}</p></div>`;
     renderPractice();
   }
   function renderPractice() {
@@ -374,6 +376,7 @@
     setSyncStatus(g.lastSync ? `${t('settings.gh.lastSync')}: ${fmtTime(g.lastSync)}` : `${t('settings.gh.lastSync')}: ${t('settings.gh.never')}`);
     $('#snapList').innerHTML = s.snapshots.length ? s.snapshots.map((sn, i) => `<li><span>${esc(fmtTime(sn.at))} · ${sn.entries.length} / ${sn.words.length}</span><button type="button" class="btn btn-soft" data-restore="${i}">${esc(t('settings.restore'))}</button></li>`).join('') : `<li class="muted">${esc(t('settings.snapEmpty'))}</li>`;
     $('#storageInfo').textContent = t('settings.storage', { kb: Store.storageKB() });
+    renderLockCard();
   }
   $('#profileName').addEventListener('change', ev => { Store.setProfile({ name: ev.target.value.trim() || 'レイハーネ' }); renderHome(); toast(t('settings.saved')); });
   $('#profileLang').addEventListener('change', ev => { Store.setProfile({ lang: ev.target.value }); applyLang(ev.target.value); });
@@ -431,6 +434,77 @@
 
   // wipe
   $('#wipeBtn').addEventListener('click', async () => { if (await confirmDlg(t('settings.wipeTitle'), t('settings.wipeConfirm'))) { Store.wipe(); resetWriteForm(); renderAll(); toast(t('settings.wiped')); } });
+
+  /* ---------- Editor lock ---------- */
+  function applyLockUI() {
+    const locked = !Auth.canEdit();
+    document.documentElement.dataset.locked = locked ? '1' : '';
+    const btn = $('#lockBtn');
+    btn.setAttribute('aria-pressed', String(locked));
+    btn.querySelector('.lock-ico').innerHTML = ICONS.get(locked ? 'lock' : 'unlock');
+    $('#lockLabel').textContent = locked ? t('lock.locked') : t('lock.unlocked');
+    btn.title = locked ? t('lock.unlock') : (Auth.hasPassword() ? t('lock.lock') : t('lock.setTitle'));
+    $('#lockBanner').hidden = !locked;
+  }
+  let unlockCallback = null;
+  function openUnlock(onSuccess) {
+    unlockCallback = onSuccess || null;
+    const dlg = $('#dlgUnlock');
+    $('#unlockPw').value = ''; $('#unlockError').hidden = true; $('#unlockPw').removeAttribute('aria-invalid');
+    $('#unlockHint').hidden = true; $('#unlockHintBtn').hidden = !Auth.hint();
+    if (!dlg.open) dlg.showModal();
+    setTimeout(() => $('#unlockPw').focus(), 50);
+  }
+  $('#unlockForm').addEventListener('submit', async ev => {
+    ev.preventDefault();
+    const btn = $('#unlockSubmit'); btn.setAttribute('aria-busy', 'true');
+    const ok = await Auth.unlock($('#unlockPw').value, $('#unlockRemember').checked);
+    btn.removeAttribute('aria-busy');
+    if (!ok) { $('#unlockError').textContent = t('lock.wrong'); $('#unlockError').hidden = false; $('#unlockPw').setAttribute('aria-invalid', 'true'); $('#unlockPw').select(); return; }
+    $('#dlgUnlock').close(); renderAll(); toast(t('lock.unlockedToast'));
+    const cb = unlockCallback; unlockCallback = null; if (cb) cb();
+  });
+  $('#unlockCancel').addEventListener('click', () => { unlockCallback = null; $('#dlgUnlock').close(); });
+  $('#unlockHintBtn').addEventListener('click', () => { $('#unlockHint').textContent = Auth.hint(); $('#unlockHint').hidden = false; });
+  $('#unlockPwToggle').addEventListener('click', () => { const i = $('#unlockPw'); const show = i.type === 'password'; i.type = show ? 'text' : 'password'; $('#unlockPwToggle').innerHTML = ICONS.get(show ? 'eyeOff' : 'eye'); });
+  $('#dlgUnlock').addEventListener('click', ev => { if (ev.target === ev.currentTarget) { unlockCallback = null; ev.currentTarget.close(); } });
+  function toggleLock() {
+    if (!Auth.hasPassword()) { location.hash = '#settings'; setTimeout(() => $('#pwNew').focus(), 100); return; }
+    if (Auth.isUnlocked()) { Auth.lock(); renderAll(); if (currentView === 'write') location.hash = '#home'; toast(t('lock.lockedToast')); }
+    else openUnlock();
+  }
+  $('#lockBtn').addEventListener('click', toggleLock);
+  $('#bannerUnlockBtn').addEventListener('click', () => openUnlock());
+  $('#settingsUnlockBtn').addEventListener('click', () => openUnlock());
+
+  function renderLockCard() {
+    const has = Auth.hasPassword(), unlocked = Auth.isUnlocked();
+    const st = $('#lockState'); st.textContent = has ? t('lock.hasPw') : t('lock.noPw'); st.className = 'lock-state ' + (has ? 'is-on' : 'is-off');
+    $('#pwForm').hidden = has && !unlocked; $('#lockLockedNote').hidden = !(has && !unlocked);
+    $('#pwCurrentField').hidden = !has; $('#pwRemoveBtn').hidden = !has;
+    $('#pwSaveLabel').textContent = has ? t('lock.change') : t('lock.save');
+    $('#pwHint').value = Auth.hint();
+  }
+  function pwError(msg, field) { $('#pwError').textContent = msg; $('#pwError').hidden = false; if (field) { field.setAttribute('aria-invalid', 'true'); field.focus(); } }
+  $('#pwForm').addEventListener('submit', async ev => {
+    ev.preventDefault();
+    $('#pwError').hidden = true; $$('#pwForm input').forEach(i => i.removeAttribute('aria-invalid'));
+    const cur = $('#pwCurrent').value, nw = $('#pwNew').value, cf = $('#pwConfirm').value;
+    if (Auth.hasPassword() && !(await Auth.verify(cur))) return pwError(t('lock.wrong'), $('#pwCurrent'));
+    if (nw.length < 4) return pwError(t('lock.tooShort'), $('#pwNew'));
+    if (nw !== cf) return pwError(t('lock.mismatch'), $('#pwConfirm'));
+    const btn = $('#pwSaveBtn'); btn.setAttribute('aria-busy', 'true');
+    await Auth.setPassword(nw, $('#pwHint').value);
+    btn.removeAttribute('aria-busy');
+    $('#pwCurrent').value = ''; $('#pwNew').value = ''; $('#pwConfirm').value = '';
+    toast(t('lock.saved')); renderAll();
+    if (Store.state.github.autosync) autoPush();
+  });
+  $('#pwRemoveBtn').addEventListener('click', async () => {
+    $('#pwError').hidden = true;
+    if (!(await Auth.verify($('#pwCurrent').value))) return pwError(t('lock.wrong'), $('#pwCurrent'));
+    if (await confirmDlg(t('lock.remove'), t('lock.removeConfirm'))) { Auth.removePassword(); $('#pwCurrent').value = ''; toast(t('lock.removed')); renderAll(); if (Store.state.github.autosync) autoPush(); }
+  });
 
   /* ---------- Seed from repo data (deployed site, first visit) ---------- */
   async function trySeed() {
