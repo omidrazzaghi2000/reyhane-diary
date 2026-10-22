@@ -1,0 +1,47 @@
+# Keeps dated copies of the diary database inside the repo.
+# Runs when data/diary.json changes (e.g. after the app pushes) and every Sunday.
+name: Backup diary data
+
+on:
+  push:
+    branches: [main]
+    paths: ['data/diary.json']
+  schedule:
+    - cron: '0 3 * * 0'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Copy snapshot
+        run: |
+          mkdir -p backups
+          stamp=$(date -u +%Y-%m-%d)
+          cp data/diary.json "backups/diary-$stamp.json"
+          # keep only the 60 newest snapshots
+          ls -1t backups/diary-*.json 2>/dev/null | tail -n +61 | xargs -r rm -f
+          python3 - <<'PY'
+          import json, glob, os
+          files = sorted(glob.glob('backups/diary-*.json'), reverse=True)
+          rows = []
+          for f in files:
+              try:
+                  d = json.load(open(f, encoding='utf-8'))
+                  rows.append(f"| {os.path.basename(f)} | {len(d.get('entries', []))} | {len(d.get('words', []))} |")
+              except Exception as e:
+                  rows.append(f"| {os.path.basename(f)} | ? | ? |")
+          open('backups/README.md', 'w', encoding='utf-8').write(
+              "# Backups\n\nAutomatic snapshots of `data/diary.json`.\n\n| file | entries | words |\n|---|---|---|\n" + "\n".join(rows) + "\n")
+          PY
+      - name: Commit
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add backups
+          git diff --cached --quiet || git commit -m "backup: diary snapshot $(date -u +%Y-%m-%d)"
+          git push

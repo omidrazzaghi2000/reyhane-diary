@@ -1,0 +1,303 @@
+<!doctype html>
+<html lang="ja" data-theme="sakura">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>レイハーネの日記 · Reyhane's Diary</title>
+  <meta name="description" content="A kawaii Japanese diary for Reyhane — write your days in Japanese, saved on your device and backed up to GitHub.">
+  <meta name="theme-color" content="#FF7AA2">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="assets/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="assets/icon-192.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@400;500;700;900&family=Baloo+2:wght@500;700;800&family=Vazirmatn:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <a class="skip-link" href="#main" data-i18n="common.skip">本文へスキップ</a>
+  <div class="petals" id="petals" aria-hidden="true"></div>
+  <div class="bg-pattern" aria-hidden="true"></div>
+
+  <div class="app-shell">
+    <header class="topbar clay">
+      <a class="brand" href="#home" aria-label="Home">
+        <span class="brand-mascot" id="brandMascot" aria-hidden="true"></span>
+        <span class="brand-text">
+          <span class="brand-title" data-i18n="app.title">レイハーネの日記</span>
+          <span class="brand-sub" id="brandDate"></span>
+        </span>
+      </a>
+      <div class="topbar-actions">
+        <div class="theme-dots" role="group" aria-label="Theme" id="themeDots"></div>
+        <label class="lang-select">
+          <span class="sr-only" data-i18n="settings.lang">ことば</span>
+          <select id="langSelect" aria-label="Language">
+            <option value="ja">日本語</option>
+            <option value="fa">فارسی</option>
+            <option value="en">English</option>
+          </select>
+        </label>
+      </div>
+    </header>
+
+    <nav class="sidenav clay" id="sidenav" aria-label="Main navigation"></nav>
+
+    <main id="main" class="main" tabindex="-1">
+      <!-- HOME -->
+      <section class="view" id="view-home" data-view="home" hidden>
+        <div class="hero clay">
+          <div class="hero-text">
+            <p class="eyebrow" id="homeDateLine"></p>
+            <h1 class="hero-title" id="homeGreeting"></h1>
+            <p class="hero-sub" data-i18n="home.sub">きょうのできごとを、日本語で書いてみよう。</p>
+            <div class="hero-cta">
+              <a href="#write" class="btn btn-primary btn-lg" id="homeWriteBtn"><span class="btn-ico" data-icon="pen"></span><span data-i18n="home.writeNow">いま書く！</span></a>
+            </div>
+          </div>
+          <div class="hero-mascot" id="heroMascot" aria-hidden="true"></div>
+          <div class="hero-deco hero-deco-1" aria-hidden="true"></div>
+          <div class="hero-deco hero-deco-2" aria-hidden="true"></div>
+        </div>
+
+        <div class="stats-grid" id="statsGrid"></div>
+
+        <div class="two-col">
+          <div class="clay card prompt-card">
+            <h2 class="card-title"><span class="card-ico" data-icon="sparkles"></span><span data-i18n="home.prompt">きょうのおだい</span></h2>
+            <p class="prompt-text" id="promptText"></p>
+            <div class="row gap">
+              <button class="btn btn-soft" id="promptBtn"><span class="btn-ico" data-icon="refresh"></span><span data-i18n="home.prompt.another">べつのおだい</span></button>
+              <button class="btn btn-secondary" id="promptUseBtn"><span class="btn-ico" data-icon="pen"></span><span data-i18n="home.prompt.use">これで書く</span></button>
+            </div>
+          </div>
+          <div class="clay card tree-card">
+            <h2 class="card-title"><span class="card-ico" data-icon="flower"></span><span data-i18n="home.tree">さくらの木</span></h2>
+            <div class="tree-wrap" id="treeWrap"></div>
+            <div class="progress" aria-hidden="true"><div class="progress-bar" id="treeBar"></div></div>
+            <p class="muted small" id="treeHint"></p>
+          </div>
+        </div>
+
+        <div class="clay card">
+          <h2 class="card-title"><span class="card-ico" data-icon="badge"></span><span data-i18n="home.badges">バッジ</span></h2>
+          <div class="badges" id="badgesGrid"></div>
+        </div>
+
+        <div class="section-head">
+          <h2 class="section-title" data-i18n="home.recent">さいきんのにっき</h2>
+          <a href="#diary" class="link" data-i18n="home.seeAll">ぜんぶ見る →</a>
+        </div>
+        <div class="entries-grid" id="recentEntries"></div>
+      </section>
+
+      <!-- WRITE -->
+      <section class="view" id="view-write" data-view="write" hidden>
+        <div class="section-head">
+          <h1 class="section-title" id="writeHeading" data-i18n="write.title">きょうのにっき</h1>
+          <span class="chip chip-edit" id="editingChip" hidden><span data-icon="edit"></span><span data-i18n="write.editing">へんしゅう中</span></span>
+        </div>
+        <form class="write-layout" id="writeForm" novalidate>
+          <div class="clay card write-card">
+            <div class="field-row">
+              <div class="field">
+                <label for="entryDate" data-i18n="write.date">日付</label>
+                <input type="date" id="entryDate" required>
+              </div>
+              <div class="field grow">
+                <label for="entryTitle" data-i18n="write.titleLabel">タイトル</label>
+                <input type="text" id="entryTitle" maxlength="80" data-i18n-ph="write.titlePh" placeholder="たとえば：さくらを見た日" autocomplete="off">
+              </div>
+            </div>
+
+            <div class="field">
+              <span class="label" data-i18n="write.mood">きもち</span>
+              <div class="mood-picker" id="moodPicker" role="radiogroup" aria-label="Mood"></div>
+            </div>
+
+            <div class="field">
+              <span class="label" data-i18n="write.weather">てんき</span>
+              <div class="weather-picker" id="weatherPicker" role="radiogroup" aria-label="Weather"></div>
+            </div>
+
+            <div class="field">
+              <div class="label-row">
+                <label for="entryBody" data-i18n="write.body">ないよう</label>
+                <span class="counter" id="charCounter">0 文字</span>
+              </div>
+              <textarea id="entryBody" rows="10" data-i18n-ph="write.bodyPh" placeholder="きょうは なにが あった？" required></textarea>
+              <p class="helper" id="bodyHelper" data-i18n="write.bodyHelp">ひらがなでも、かんじでも、なんでもOK！ステッカーはパネルから入れられるよ。</p>
+              <p class="error" id="bodyError" role="alert" hidden></p>
+            </div>
+
+            <div class="field">
+              <label for="entryTags" data-i18n="write.tags">タグ</label>
+              <input type="text" id="entryTags" data-i18n-ph="write.tagsPh" placeholder="がっこう, ともだち, おかし" autocomplete="off">
+              <p class="helper" data-i18n="write.tagsHelp">コンマ（,）でわけてね</p>
+            </div>
+
+            <div class="write-actions">
+              <label class="check">
+                <input type="checkbox" id="entryFav">
+                <span class="check-box" aria-hidden="true"><span data-icon="heart"></span></span>
+                <span data-i18n="write.favorite">おきにいり</span>
+              </label>
+              <span class="draft-note muted small" id="draftNote"></span>
+              <div class="row gap">
+                <button type="button" class="btn btn-ghost" id="cancelEditBtn" hidden data-i18n="write.cancelEdit">へんしゅうをやめる</button>
+                <button type="button" class="btn btn-ghost" id="clearBtn"><span class="btn-ico" data-icon="eraser"></span><span data-i18n="write.clear">けす</span></button>
+                <button type="submit" class="btn btn-primary btn-lg" id="saveBtn"><span class="btn-ico" data-icon="check"></span><span data-i18n="write.save">ほぞんする</span></button>
+              </div>
+            </div>
+          </div>
+
+          <aside class="clay card helper-card" aria-label="Writing helpers">
+            <h2 class="card-title"><span class="card-ico" data-icon="wand"></span><span data-i18n="write.helpers">おたすけパネル</span></h2>
+            <div class="tabs" role="tablist" id="helperTabs"></div>
+            <div class="helper-body" id="helperBody"></div>
+          </aside>
+        </form>
+      </section>
+
+      <!-- DIARY -->
+      <section class="view" id="view-diary" data-view="diary" hidden>
+        <div class="section-head">
+          <h1 class="section-title" data-i18n="diary.title">わたしのにっき</h1>
+          <span class="chip" id="diaryCount"></span>
+        </div>
+        <div class="clay card toolbar">
+          <label class="search">
+            <span data-icon="search" aria-hidden="true"></span>
+            <input type="search" id="searchInput" data-i18n-ph="diary.searchPh" placeholder="ことばでさがす…" aria-label="Search">
+          </label>
+          <div class="seg" role="group" aria-label="Filter">
+            <button class="seg-btn is-active" data-filter="all" data-i18n="diary.all">すべて</button>
+            <button class="seg-btn" data-filter="fav" data-i18n="diary.favorites">おきにいり</button>
+          </div>
+          <div class="seg" role="group" aria-label="View mode">
+            <button class="seg-btn is-active" data-mode="list"><span data-icon="list"></span><span data-i18n="diary.list">リスト</span></button>
+            <button class="seg-btn" data-mode="calendar"><span data-icon="calendar"></span><span data-i18n="diary.calendar">カレンダー</span></button>
+          </div>
+        </div>
+        <div id="diaryList" class="entries-grid"></div>
+        <div id="diaryCalendar" class="clay card calendar" hidden></div>
+      </section>
+
+      <!-- WORDS -->
+      <section class="view" id="view-words" data-view="words" hidden>
+        <div class="section-head">
+          <h1 class="section-title" data-i18n="words.title">たんごちょう</h1>
+          <span class="chip" id="wordsCount"></span>
+        </div>
+        <div class="two-col">
+          <form class="clay card" id="wordForm" novalidate>
+            <h2 class="card-title"><span class="card-ico" data-icon="plus"></span><span data-i18n="words.addTitle">あたらしい単語</span></h2>
+            <div class="field"><label for="wordText" data-i18n="words.word">たんご</label><input id="wordText" type="text" placeholder="桜" required maxlength="40"></div>
+            <div class="field"><label for="wordReading" data-i18n="words.reading">よみかた</label><input id="wordReading" type="text" placeholder="さくら" maxlength="60"></div>
+            <div class="field"><label for="wordMeaning" data-i18n="words.meaning">いみ</label><input id="wordMeaning" type="text" placeholder="cherry blossom / شکوفه گیلاس" maxlength="120"></div>
+            <p class="error" id="wordError" role="alert" hidden></p>
+            <button class="btn btn-primary" type="submit"><span class="btn-ico" data-icon="plus"></span><span data-i18n="words.add">ついかする</span></button>
+          </form>
+          <div class="clay card practice-card">
+            <h2 class="card-title"><span class="card-ico" data-icon="sparkles"></span><span data-i18n="words.practice">れんしゅう</span></h2>
+            <div id="practiceArea"></div>
+          </div>
+        </div>
+        <div id="wordsList" class="words-grid"></div>
+      </section>
+
+      <!-- SETTINGS -->
+      <section class="view" id="view-settings" data-view="settings" hidden>
+        <h1 class="section-title" data-i18n="settings.title">せってい</h1>
+        <div class="settings-grid">
+          <div class="clay card">
+            <h2 class="card-title"><span class="card-ico" data-icon="user"></span><span data-i18n="settings.profile">プロフィール</span></h2>
+            <div class="field"><label for="profileName" data-i18n="settings.name">なまえ</label><input id="profileName" type="text" maxlength="30"></div>
+            <div class="field"><label for="profileLang" data-i18n="settings.lang">ことば</label>
+              <select id="profileLang"><option value="ja">日本語</option><option value="fa">فارسی</option><option value="en">English</option></select></div>
+            <div class="field"><span class="label" data-i18n="settings.theme">テーマ</span><div class="theme-grid" id="themeGrid"></div></div>
+            <label class="check"><input type="checkbox" id="petalsToggle"><span class="check-box" aria-hidden="true"><span data-icon="check"></span></span><span data-i18n="settings.petals">さくらの花びら</span></label>
+          </div>
+
+          <div class="clay card">
+            <h2 class="card-title"><span class="card-ico" data-icon="save"></span><span data-i18n="settings.backup">バックアップ</span></h2>
+            <p class="muted small" data-i18n="settings.backupHelp">にっきは このデバイスの中（localStorage）にほぞんされているよ。ときどきファイルにも ほぞんしておこう。</p>
+            <div class="row gap wrap">
+              <button class="btn btn-secondary" id="exportBtn"><span class="btn-ico" data-icon="download"></span><span data-i18n="settings.export">ファイルにほぞん</span></button>
+              <label class="btn btn-soft file-btn"><span class="btn-ico" data-icon="upload"></span><span data-i18n="settings.import">ファイルからもどす</span><input type="file" id="importFile" accept="application/json,.json" hidden></label>
+            </div>
+            <h3 class="sub-title" data-i18n="settings.snapshots">じどうバックアップ</h3>
+            <ul class="snap-list" id="snapList"></ul>
+          </div>
+
+          <div class="clay card gh-card">
+            <h2 class="card-title"><span class="card-ico" data-icon="cloud"></span><span data-i18n="settings.github">GitHub どうき</span></h2>
+            <p class="muted small" data-i18n="settings.gh.help">GitHubのリポジトリを「データベース」にして、にっきをクラウドにもほぞんできるよ。（大人の人といっしょにせっていしてね）</p>
+            <div class="field-row">
+              <div class="field grow"><label for="ghOwner" data-i18n="settings.gh.owner">ユーザー名</label><input id="ghOwner" type="text" placeholder="username" autocomplete="off" spellcheck="false"></div>
+              <div class="field grow"><label for="ghRepo" data-i18n="settings.gh.repo">リポジトリ</label><input id="ghRepo" type="text" placeholder="reyhane-diary" autocomplete="off" spellcheck="false"></div>
+            </div>
+            <div class="field-row">
+              <div class="field"><label for="ghBranch" data-i18n="settings.gh.branch">ブランチ</label><input id="ghBranch" type="text" placeholder="main" autocomplete="off" spellcheck="false"></div>
+              <div class="field grow"><label for="ghPath" data-i18n="settings.gh.path">ファイルのパス</label><input id="ghPath" type="text" placeholder="data/diary.json" autocomplete="off" spellcheck="false"></div>
+            </div>
+            <div class="field">
+              <label for="ghToken" data-i18n="settings.gh.token">トークン</label>
+              <div class="input-with-btn">
+                <input id="ghToken" type="password" placeholder="github_pat_…" autocomplete="off" spellcheck="false">
+                <button type="button" class="icon-btn" id="ghTokenToggle" aria-label="Show token"><span data-icon="eye"></span></button>
+              </div>
+              <p class="helper" data-i18n="settings.gh.tokenHelp">Fine-grained token · Contents: Read and write</p>
+            </div>
+            <label class="check"><input type="checkbox" id="ghAutosync"><span class="check-box" aria-hidden="true"><span data-icon="check"></span></span><span data-i18n="settings.gh.autosync">ほぞんのたびに自動でおくる</span></label>
+            <div class="row gap wrap">
+              <button class="btn btn-soft" id="ghSaveBtn"><span class="btn-ico" data-icon="check"></span><span data-i18n="settings.gh.save">せっていをほぞん</span></button>
+              <button class="btn btn-primary" id="ghPushBtn"><span class="btn-ico" data-icon="cloudUp"></span><span data-i18n="settings.gh.push">GitHubへおくる</span></button>
+              <button class="btn btn-secondary" id="ghPullBtn"><span class="btn-ico" data-icon="cloudDown"></span><span data-i18n="settings.gh.pull">GitHubからもらう</span></button>
+            </div>
+            <p class="sync-status" id="ghStatus" aria-live="polite"></p>
+          </div>
+
+          <div class="clay card danger-card">
+            <h2 class="card-title"><span class="card-ico" data-icon="alert"></span><span data-i18n="settings.danger">きけんゾーン</span></h2>
+            <p class="muted small" data-i18n="settings.dangerHelp">ぜんぶのにっきと単語をけします。さきにバックアップしてね！</p>
+            <button class="btn btn-danger" id="wipeBtn"><span class="btn-ico" data-icon="trash"></span><span data-i18n="settings.wipe">ぜんぶけす</span></button>
+          </div>
+
+          <div class="clay card about-card">
+            <h2 class="card-title"><span class="card-ico" data-icon="info"></span><span data-i18n="settings.about">このアプリについて</span></h2>
+            <p class="small" data-i18n="settings.aboutText">レイハーネのための、日本語でにっきを書く小さなアプリ。データはあなたのデバイスにあって、GitHubにバックアップできるよ。</p>
+            <p class="muted small">v1.0 · <span id="storageInfo"></span></p>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <nav class="bottomnav clay" id="bottomnav" aria-label="Main navigation"></nav>
+  </div>
+
+  <div class="toast-region" id="toasts" aria-live="polite" aria-atomic="false"></div>
+
+  <dialog class="dlg clay" id="dlgConfirm">
+    <form method="dialog" class="dlg-body">
+      <div class="dlg-ico" data-icon="alert" aria-hidden="true"></div>
+      <h2 class="dlg-title" id="dlgConfirmTitle"></h2>
+      <p class="dlg-text" id="dlgConfirmText"></p>
+      <div class="row gap end">
+        <button class="btn btn-ghost" value="cancel" data-i18n="common.cancel">やめる</button>
+        <button class="btn btn-danger" value="ok" id="dlgConfirmOk" data-i18n="common.yes">はい</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog class="dlg dlg-entry clay" id="dlgEntry" aria-labelledby="dlgEntryTitle">
+    <div class="dlg-body" id="dlgEntryBody"></div>
+  </dialog>
+
+  <script src="js/i18n.js"></script>
+  <script src="js/icons.js"></script>
+  <script src="js/store.js"></script>
+  <script src="js/github.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
