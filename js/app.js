@@ -501,7 +501,11 @@
     window.addEventListener('hashchange', route);
     window.addEventListener('offline', () => toast(t('offline')));
     reducedMotion.addEventListener?.('change', () => renderPetals(Store.settings.petals));
-    if ('serviceWorker' in navigator && location.protocol !== 'file:') navigator.serviceWorker.register('sw.js').catch(() => {});
+    if ('serviceWorker' in navigator && location.protocol !== 'file:') {
+      navigator.serviceWorker.register('sw.js').catch(() => {});
+      let hadController = !!navigator.serviceWorker.controller;
+      navigator.serviceWorker.addEventListener('controllerchange', () => { if (hadController && !Store.state.dirty) location.reload(); hadController = true; });
+    }
     route(); // marks nav while loading
     if (await loadData()) {
       const draft = Store.getDraft();
