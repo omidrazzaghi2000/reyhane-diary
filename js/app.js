@@ -1,4 +1,4 @@
-/* App — UI, routing, views */
+/* App — UI, routing, views. Data = Store.data (shared, loaded from GitHub by Sync). */
 (function () {
   const { t } = I18N;
   const $ = (s, r = document) => r.querySelector(s);
@@ -6,6 +6,7 @@
   const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const debounce = (fn, ms) => { let id; return (...a) => { clearTimeout(id); id = setTimeout(() => fn(...a), ms); }; };
   const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+  const D = () => Store.data;
 
   /* ---------- Date helpers ---------- */
   const DOW_JA = ['日', '月', '火', '水', '木', '金', '土'];
@@ -34,17 +35,16 @@
   const KAOMOJI = ['(๑˃̵ᴗ˂̵)', '(´｡• ᵕ •｡`) ♡', '(≧▽≦)', '(｡•̀ᴗ-)✧', '(´；ω；`)', '(*´꒳`*)', '(๑•̀ㅂ•́)و✧', '(つ≧▽≦)つ', '( ˘ω˘ )', '(⁎˃ᆺ˂)', '♪(´ε｀ )', '(｡>﹏<｡)', '✿', '☆', '♡', '(*^▽^*)'];
   const THEMES = [['sakura', '#FF6F9D', 'さくら'], ['matcha', '#4DB37E', 'まっちゃ'], ['sora', '#5AA9FF', 'そら'], ['yozora', '#2B2546', 'よぞら']];
   const BADGES = [
-    { id: 'first', icon: 'pen', test: s => s.entries.length >= 1 },
-    { id: 'streak3', icon: 'flame', test: s => streak(s.entries) >= 3 },
-    { id: 'streak7', icon: 'flame', test: s => streak(s.entries) >= 7 },
-    { id: 'ten', icon: 'book', test: s => s.entries.length >= 10 },
-    { id: 'thirty', icon: 'book', test: s => s.entries.length >= 30 },
-    { id: 'hundred', icon: 'star', test: s => s.entries.length >= 100 },
-    { id: 'words10', icon: 'abc', test: s => s.words.length >= 10 },
-    { id: 'long', icon: 'type', test: s => s.entries.some(e => e.body.length >= 300) },
-    { id: 'fav', icon: 'heart', test: s => s.entries.filter(e => e.favorite).length >= 5 },
-    { id: 'allmoods', icon: 'smile', test: s => ICONS.moodKeys.every(m => s.entries.some(e => e.mood === m)) },
-    { id: 'night', icon: 'moon', test: s => s.profile.theme === 'yozora' || s.earned.includes('night') },
+    { id: 'first', icon: 'pen', test: d => d.entries.length >= 1 },
+    { id: 'streak3', icon: 'flame', test: d => streak(d.entries) >= 3 },
+    { id: 'streak7', icon: 'flame', test: d => streak(d.entries) >= 7 },
+    { id: 'ten', icon: 'book', test: d => d.entries.length >= 10 },
+    { id: 'thirty', icon: 'book', test: d => d.entries.length >= 30 },
+    { id: 'hundred', icon: 'star', test: d => d.entries.length >= 100 },
+    { id: 'words10', icon: 'abc', test: d => d.words.length >= 10 },
+    { id: 'long', icon: 'type', test: d => d.entries.some(e => e.body.length >= 300) },
+    { id: 'fav', icon: 'heart', test: d => d.entries.filter(e => e.favorite).length >= 5 },
+    { id: 'allmoods', icon: 'smile', test: d => ICONS.moodKeys.every(m => d.entries.some(e => e.mood === m)) },
   ];
 
   /* ---------- Stats ---------- */
@@ -53,8 +53,7 @@
     if (!days.size) return 0;
     let d = new Date(); let iso = Store.todayISO(d);
     if (!days.has(iso)) { d.setDate(d.getDate() - 1); iso = Store.todayISO(d); if (!days.has(iso)) return 0; }
-    let n = 0;
-    while (days.has(Store.todayISO(d))) { n++; d.setDate(d.getDate() - 1); }
+    let n = 0; while (days.has(Store.todayISO(d))) { n++; d.setDate(d.getDate() - 1); }
     return n;
   }
   const treeStage = n => n >= 50 ? 5 : n >= 20 ? 4 : n >= 10 ? 3 : n >= 5 ? 2 : n >= 1 ? 1 : 0;
@@ -90,46 +89,69 @@
     $$('.theme-dot').forEach(b => b.classList.toggle('is-active', b.dataset.theme === theme));
     $$('.theme-card').forEach(b => b.classList.toggle('is-active', b.dataset.theme === theme));
   }
-  function applyLang(lang) {
-    I18N.setLang(lang);
-    $('#langSelect').value = lang; $('#profileLang').value = lang;
-    renderNav(); renderAll();
-  }
+  function applyLang(lang) { I18N.setLang(lang); $('#langSelect').value = lang; $('#profileLang').value = lang; renderNav(); renderAll(); }
   function renderPetals(on) {
     const wrap = $('#petals'); wrap.innerHTML = '';
     if (!on || reducedMotion.matches) return;
     for (let i = 0; i < 16; i++) {
       const p = document.createElement('span'); p.className = 'petal';
       p.style.left = Math.random() * 100 + 'vw'; p.style.setProperty('--dur', 9 + Math.random() * 10 + 's'); p.style.setProperty('--delay', -Math.random() * 15 + 's');
-      p.style.transform = `scale(${.6 + Math.random() * .8})`;
-      wrap.appendChild(p);
+      p.style.transform = `scale(${.6 + Math.random() * .8})`; wrap.appendChild(p);
     }
   }
-
-  /* ---------- Icons into [data-icon] ---------- */
   function hydrateIcons(root = document) { $$('[data-icon]', root).forEach(el => { if (!el.firstElementChild) el.innerHTML = ICONS.get(el.dataset.icon); }); }
+
+  /* ---------- Data loading & saving ---------- */
+  async function loadData() {
+    const box = $('#loadState'); box.hidden = false; box.classList.remove('is-error'); $('#loadRetry').hidden = true; $('#loadText').textContent = t('sync.loading');
+    document.documentElement.dataset.loading = '1';
+    try {
+      await Sync.load();
+      box.hidden = true; document.documentElement.dataset.loading = '';
+      renderAll(); return true;
+    } catch (e) {
+      console.error(e);
+      box.classList.add('is-error'); $('#loadText').textContent = e.code === 'auth' ? t('settings.gh.auth') : t('sync.loadError'); $('#loadRetry').hidden = false;
+      return false;
+    }
+  }
+  $('#loadRetry').addEventListener('click', () => loadData().then(ok => ok && route()));
+  function syncChip(state, text) {
+    const chip = $('#syncChip'); chip.hidden = !state; chip.className = 'sync-chip' + (state === 'ok' ? ' is-ok' : state === 'err' ? ' is-err' : '');
+    $('#syncChipText').textContent = text || '';
+    if (state === 'ok') setTimeout(() => { if (!Store.state.dirty && !Store.state.saving) chip.hidden = true; }, 3000);
+  }
+  function ghErrorMsg(e) { const map = { auth: 'settings.gh.auth', notfound: 'settings.gh.notfound', conflict: 'settings.gh.conflict', missing: 'sync.needToken' }; return map[e.code] ? t(map[e.code]) : (navigator.onLine ? t('settings.gh.error', { msg: e.message || '' }) : t('sync.offline')); }
+  /* Persist the in-memory data to GitHub. Returns true on success. */
+  async function persist(message) {
+    if (!Sync.hasToken()) { toast(t('sync.needToken'), { type: 'err', ms: 6000 }); syncChip('err', t('sync.unsaved')); location.hash = '#settings'; setTimeout(() => $('#ghToken').focus(), 150); return false; }
+    syncChip('saving', t('sync.saving'));
+    try { await Sync.save(message); syncChip('ok', t('sync.saved')); renderSettings(); return true; }
+    catch (e) { console.error(e); syncChip('err', t('sync.unsaved')); toast(ghErrorMsg(e), { type: 'err', ms: 6000, action: t('sync.retry'), onAction: () => persist(message) }); return false; }
+  }
+  $('#syncChip').addEventListener('click', () => { if (Store.state.dirty && !Store.state.saving) persist(); });
 
   /* ---------- Navigation & routing ---------- */
   const VIEWS = ['home', 'write', 'diary', 'words', 'settings'];
   const NAV_ICON = { home: 'home', write: 'pen', diary: 'book', words: 'abc', settings: 'settings' };
   function renderNav() {
     const html = VIEWS.map(v => `<a class="nav-btn" href="#${v}" data-nav="${v}" ${v === 'write' ? 'data-edit-only' : ''}>${ICONS.get(NAV_ICON[v])}<span>${esc(t('nav.' + v))}</span></a>`).join('');
-    $('#sidenav').innerHTML = html; $('#bottomnav').innerHTML = html;
-    markNav();
+    $('#sidenav').innerHTML = html; $('#bottomnav').innerHTML = html; markNav();
   }
   let currentView = 'home';
   function markNav() { $$('[data-nav]').forEach(a => { const on = a.dataset.nav === currentView; a.classList.toggle('is-active', on); if (on) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current'); }); }
   function route() {
     const hash = location.hash.replace('#', '') || 'home';
     const [view, arg] = hash.split('/');
+    if (!Store.state.loaded) { currentView = VIEWS.includes(view) ? view : 'home'; markNav(); return; }
     if (view === 'entry' && arg) { openEntry(arg); return; }
     let v = VIEWS.includes(view) ? view : 'home';
     if (v === 'write' && !Auth.canEdit()) { openUnlock(() => { if (location.hash === '#' + hash) route(); else location.hash = hash; }); v = 'home'; }
     currentView = v;
     $$('.view').forEach(s => { s.hidden = s.dataset.view !== v; });
     markNav();
-    if (v === 'write' && arg === 'new') { resetWriteForm(); }
-    if (v === 'write' && arg && arg !== 'new' && arg.startsWith('date-')) { resetWriteForm(); $('#entryDate').value = arg.slice(5); }
+    if (v === 'write' && arg === 'new') resetWriteForm();
+    if (v === 'write' && arg && arg.startsWith('date-')) { resetWriteForm(); $('#entryDate').value = arg.slice(5); }
     if (v === 'write' && arg && Store.getEntry(arg)) beginEdit(arg);
     renderView(v);
     $('#main').focus({ preventScroll: true });
@@ -142,35 +164,28 @@
   /* ---------- HOME ---------- */
   let promptIdx = Math.floor(Math.random() * PROMPTS.length);
   function renderHome() {
-    const s = Store.state; const name = s.profile.name || 'レイハーネ';
+    const d = D(); const name = d.profile.name || 'レイハーネ';
     const h = new Date().getHours();
     $('#homeGreeting').textContent = t(h < 11 ? 'home.greet.morning' : h < 18 ? 'home.greet.day' : 'home.greet.evening', { name });
     $('#homeDateLine').textContent = fmtDate(Store.todayISO());
-    const chars = s.entries.reduce((n, e) => n + e.body.length, 0);
-    const stats = [['c1', 'flame', streak(s.entries), 'home.streak'], ['c2', 'book', s.entries.length, 'home.entries'], ['c3', 'type', chars, 'home.chars'], ['c4', 'abc', s.words.length, 'home.words']];
+    const chars = d.entries.reduce((n, e) => n + e.body.length, 0);
+    const stats = [['c1', 'flame', streak(d.entries), 'home.streak'], ['c2', 'book', d.entries.length, 'home.entries'], ['c3', 'type', chars, 'home.chars'], ['c4', 'abc', d.words.length, 'home.words']];
     $('#statsGrid').innerHTML = stats.map(([c, ic, val, key]) => `<div class="clay stat"><div class="stat-ico ${c}">${ICONS.get(ic)}</div><div><div class="stat-val">${val.toLocaleString(I18N.lang === 'fa' ? 'fa-IR' : 'en-US')}</div><div class="stat-lbl">${esc(t(key))}</div></div></div>`).join('');
     $('#promptText').textContent = PROMPTS[promptIdx];
-    const stage = treeStage(s.entries.length);
+    const stage = treeStage(d.entries.length);
     $('#treeWrap').innerHTML = ICONS.tree(stage);
-    const next = TREE_NEXT.find(n => n > s.entries.length);
-    const prev = stage === 0 ? 0 : TREE_NEXT[stage - 1];
-    $('#treeBar').style.width = next ? Math.round(((s.entries.length - prev) / (next - prev)) * 100) + '%' : '100%';
-    $('#treeHint').textContent = next ? t('home.tree.hint', { n: next - s.entries.length }) : t('home.tree.full');
-    // badges
-    const earnedNow = BADGES.filter(b => b.test(s)).map(b => b.id);
-    const newly = Store.markEarned(earnedNow);
-    $('#badgesGrid').innerHTML = BADGES.map(b => { const on = s.earned.includes(b.id); return `<div class="badge ${on ? 'is-earned' : ''}" title="${esc(t('badge.' + b.id + '.d'))}"><div class="badge-ico">${ICONS.get(b.icon)}</div><span>${esc(t('badge.' + b.id))}</span><span class="muted" style="font-weight:500">${esc(t('badge.' + b.id + '.d'))}</span></div>`; }).join('');
-    $('#recentEntries').innerHTML = s.entries.length ? s.entries.slice(0, 3).map(entryCard).join('') : emptyState(t('home.empty'));
+    const next = TREE_NEXT.find(n => n > d.entries.length); const prev = stage === 0 ? 0 : TREE_NEXT[stage - 1];
+    $('#treeBar').style.width = next ? Math.round(((d.entries.length - prev) / (next - prev)) * 100) + '%' : '100%';
+    $('#treeHint').textContent = next ? t('home.tree.hint', { n: next - d.entries.length }) : t('home.tree.full');
+    $('#badgesGrid').innerHTML = BADGES.map(b => { const on = b.test(d); return `<div class="badge ${on ? 'is-earned' : ''}" title="${esc(t('badge.' + b.id + '.d'))}"><div class="badge-ico">${ICONS.get(b.icon)}</div><span>${esc(t('badge.' + b.id))}</span><span class="muted" style="font-weight:500">${esc(t('badge.' + b.id + '.d'))}</span></div>`; }).join('');
+    $('#recentEntries').innerHTML = d.entries.length ? d.entries.slice(0, 3).map(entryCard).join('') : emptyState(t('home.empty'));
   }
   $('#promptBtn').addEventListener('click', () => { promptIdx = (promptIdx + 1 + Math.floor(Math.random() * (PROMPTS.length - 1))) % PROMPTS.length; $('#promptText').textContent = PROMPTS[promptIdx]; });
   $('#promptUseBtn').addEventListener('click', () => { resetWriteForm(); $('#entryBody').value = PROMPTS[promptIdx] + '\n\n'; location.hash = '#write'; setTimeout(() => { const ta = $('#entryBody'); ta.focus(); ta.setSelectionRange(ta.value.length, ta.value.length); updateCounter(); }, 50); });
-
-  function emptyState(text) { return `<div class="empty">${ICONS.stickers.neko}<p>${esc(text)}</p><a class="btn btn-primary" href="#write/new">${ICONS.get('pen')}<span>${esc(t('home.writeNow'))}</span></a></div>`; }
+  function emptyState(text) { return `<div class="empty">${ICONS.stickers.neko}<p>${esc(text)}</p><a class="btn btn-primary" href="#write/new" data-edit-only>${ICONS.get('pen')}<span>${esc(t('home.writeNow'))}</span></a></div>`; }
 
   /* ---------- Entry rendering ---------- */
-  function renderBody(body) {
-    return esc(body).replace(/:([a-z]+):/g, (m, k) => ICONS.stickers[k] ? `<span class="sticker-inline">${ICONS.stickers[k]}</span>` : m);
-  }
+  function renderBody(body) { return esc(body).replace(/:([a-z]+):/g, (m, k) => ICONS.stickers[k] ? `<span class="sticker-inline">${ICONS.stickers[k]}</span>` : m); }
   function excerpt(body) { return body.replace(/:([a-z]+):/g, '').slice(0, 120); }
   function entryCard(e, i = 0) {
     return `<button type="button" class="clay entry-card" data-open="${e.id}" style="--i:${i}">
@@ -180,9 +195,7 @@
       <div class="entry-tags"><span class="entry-wx" title="${esc(t('wx.' + e.weather))}">${ICONS.weather[e.weather] || ''}</span>${e.tags.map(tag => `<span class="tag">#${esc(tag)}</span>`).join('')}</div>
     </button>`;
   }
-  document.addEventListener('click', ev => {
-    const card = ev.target.closest('[data-open]'); if (card) { openEntry(card.dataset.open); return; }
-  });
+  document.addEventListener('click', ev => { const card = ev.target.closest('[data-open]'); if (card) openEntry(card.dataset.open); });
 
   /* ---------- Read dialog ---------- */
   function openEntry(id) {
@@ -192,7 +205,7 @@
       <button type="button" class="icon-btn read-close" id="readClose" aria-label="${esc(t('common.close'))}">${ICONS.get('x')}</button>
       <div class="read-head"><span class="read-mood">${ICONS.moods[e.mood] || ''}</span><div><h2 class="read-title" id="dlgEntryTitle">${renderBody(e.title || t('write.untitled'))}</h2>
         <div class="read-meta"><span>${esc(fmtDate(e.date))}</span><span>·</span>${ICONS.weather[e.weather] || ''}<span>${esc(t('wx.' + e.weather))}</span><span>·</span><span>${esc(t('mood.' + e.mood))}</span></div></div></div>
-      <div class="read-body">${renderBody(e.body)}<span class="hanko" aria-hidden="true">${esc((Store.state.profile.name || 'レイハーネ').slice(0, 4))}</span></div>
+      <div class="read-body">${renderBody(e.body)}<span class="hanko" aria-hidden="true">${esc((D().profile.name || 'レイハーネ').slice(0, 4))}</span></div>
       <div class="entry-tags" style="margin-top:12px">${e.tags.map(tag => `<span class="tag">#${esc(tag)}</span>`).join('')}</div>
       <div class="read-actions" data-edit-only>
         <button type="button" class="btn btn-ghost" id="readDelete">${ICONS.get('trash')}<span>${esc(t('diary.delete'))}</span></button>
@@ -201,7 +214,7 @@
       </div>`;
     $('#readClose').onclick = () => dlg.close();
     $('#readEdit').onclick = () => { dlg.close(); location.hash = '#write/' + e.id; };
-    $('#readFav').onclick = () => { Store.updateEntry(e.id, { favorite: !e.favorite }); openEntry(e.id); renderDiary(); renderHome(); };
+    $('#readFav').onclick = () => { Store.updateEntry(e.id, { favorite: !e.favorite }); openEntry(e.id); renderDiary(); renderHome(); persist(); };
     $('#readDelete').onclick = async () => { if (await confirmDlg(t('diary.deleteTitle'), t('diary.deleteConfirm'))) { dlg.close(); removeEntry(e.id); } };
     if (!dlg.open) dlg.showModal();
   }
@@ -209,8 +222,8 @@
   function removeEntry(id) {
     const removed = Store.deleteEntry(id); if (!removed) return;
     renderDiary(); renderHome();
-    toast(t('diary.deleted'), { action: t('diary.undo'), ms: 7000, onAction: () => { Store.restoreEntry(removed); renderDiary(); renderHome(); toast(t('diary.restored')); } });
-    if (Store.state.github.autosync) autoPush();
+    toast(t('diary.deleted'), { action: t('diary.undo'), ms: 7000, onAction: () => { Store.restoreEntry(removed); renderDiary(); renderHome(); toast(t('diary.restored')); persist(); } });
+    persist();
   }
 
   /* ---------- WRITE ---------- */
@@ -253,11 +266,7 @@
   $('#moodPicker').addEventListener('click', ev => { const b = ev.target.closest('[data-mood]'); if (!b) return; $('#moodPicker').dataset.value = b.dataset.mood; $$('[data-mood]').forEach(x => x.setAttribute('aria-checked', x === b)); saveDraft(); });
   $('#weatherPicker').addEventListener('click', ev => { const b = ev.target.closest('[data-wx]'); if (!b) return; $('#weatherPicker').dataset.value = b.dataset.wx; $$('[data-wx]').forEach(x => x.setAttribute('aria-checked', x === b)); saveDraft(); });
   function updateCounter() { $('#charCounter').textContent = t('write.chars', { n: body.value.replace(/\s/g, '').length }); }
-  const saveDraft = debounce(() => {
-    if (editingId) return;
-    Store.setDraft(readForm());
-    $('#draftNote').textContent = t('write.draft');
-  }, 500);
+  const saveDraft = debounce(() => { if (editingId) return; Store.setDraft(readForm()); $('#draftNote').textContent = t('write.draft'); }, 500);
   body.addEventListener('input', () => { updateCounter(); $('#bodyError').hidden = true; body.removeAttribute('aria-invalid'); saveDraft(); });
   ['#entryTitle', '#entryTags', '#entryDate', '#entryFav'].forEach(sel => $(sel).addEventListener('input', saveDraft));
   function readForm() {
@@ -272,47 +281,47 @@
   function resetWriteForm() { editingId = null; $('#editingChip').hidden = true; $('#cancelEditBtn').hidden = true; $('#draftNote').textContent = ''; fillForm({ date: Store.todayISO() }); }
   function beginEdit(id) { const e = Store.getEntry(id); if (!e) return; editingId = id; fillForm(e); $('#editingChip').hidden = false; $('#cancelEditBtn').hidden = false; $('#draftNote').textContent = ''; }
   $('#cancelEditBtn').addEventListener('click', () => { resetWriteForm(); location.hash = '#diary'; });
-  $('#clearBtn').addEventListener('click', async () => { if (!body.value && !$('#entryTitle').value) return; if (await confirmDlg(t('write.clear'), t('write.clearConfirm'))) { const wasEditing = editingId; resetWriteForm(); if (wasEditing) beginEdit(wasEditing), fillForm({ ...Store.getEntry(wasEditing), body: '', title: '' }); Store.setDraft(null); } });
-  form.addEventListener('submit', ev => {
+  $('#clearBtn').addEventListener('click', async () => { if (!body.value && !$('#entryTitle').value) return; if (await confirmDlg(t('write.clear'), t('write.clearConfirm'))) { const was = editingId; resetWriteForm(); if (was) { beginEdit(was); fillForm({ ...Store.getEntry(was), body: '', title: '' }); } Store.setDraft(null); } });
+  form.addEventListener('submit', async ev => {
     ev.preventDefault();
     if (!Auth.canEdit()) { openUnlock(); return; }
     const data = readForm();
     if (!data.date) { toast(t('write.needDate'), { type: 'err' }); $('#entryDate').focus(); return; }
     if (!data.body.trim()) { $('#bodyError').textContent = t('write.needBody'); $('#bodyError').hidden = false; body.setAttribute('aria-invalid', 'true'); body.focus(); return; }
-    const saveBtn = $('#saveBtn'); saveBtn.setAttribute('aria-busy', 'true');
+    if (!Sync.hasToken()) { persist(); return; }
+    const saveBtn = $('#saveBtn'); saveBtn.setAttribute('aria-busy', 'true'); saveBtn.disabled = true;
     const wasEditing = !!editingId;
     const entry = wasEditing ? Store.updateEntry(editingId, data) : Store.addEntry(data);
-    saveBtn.removeAttribute('aria-busy');
+    renderHome(); renderDiary();
+    const ok = await persist(`diary: ${wasEditing ? 'update' : 'new'} entry ${entry.date}`);
+    saveBtn.removeAttribute('aria-busy'); saveBtn.disabled = false;
+    if (!ok) return; // entry stays in the form & memory; chip offers retry
     toast(t(wasEditing ? 'write.updated' : 'write.saved'));
     resetWriteForm(); Store.setDraft(null);
-    renderHome(); renderDiary();
     location.hash = '#entry/' + entry.id;
-    if (Store.state.github.autosync) autoPush();
   });
 
   /* ---------- DIARY ---------- */
   let filter = 'all', mode = 'list', query = '', calMonth = null, calSelected = null;
   function filteredEntries() {
     const q = query.trim().toLowerCase();
-    return Store.state.entries.filter(e => (filter !== 'fav' || e.favorite) && (!q || (e.title + ' ' + e.body + ' ' + e.tags.join(' ')).toLowerCase().includes(q)));
+    return D().entries.filter(e => (filter !== 'fav' || e.favorite) && (!q || (e.title + ' ' + e.body + ' ' + e.tags.join(' ')).toLowerCase().includes(q)));
   }
   function renderDiary() {
     const list = filteredEntries();
-    $('#diaryCount').textContent = t('diary.count', { n: Store.state.entries.length });
+    $('#diaryCount').textContent = t('diary.count', { n: D().entries.length });
     $('#diaryList').hidden = mode !== 'list'; $('#diaryCalendar').hidden = mode !== 'calendar';
-    if (mode === 'list') {
-      $('#diaryList').innerHTML = list.length ? list.map((e, i) => entryCard(e, i)).join('') : Store.state.entries.length ? `<div class="empty">${ICONS.stickers.bunny}<p>${esc(t('diary.noResults'))}</p></div>` : emptyState(t('home.empty'));
-    } else renderCalendar();
+    if (mode === 'list') $('#diaryList').innerHTML = list.length ? list.map((e, i) => entryCard(e, i)).join('') : D().entries.length ? `<div class="empty">${ICONS.stickers.bunny}<p>${esc(t('diary.noResults'))}</p></div>` : emptyState(t('home.empty'));
+    else renderCalendar();
   }
   $('#searchInput').addEventListener('input', debounce(ev => { query = ev.target.value; renderDiary(); }, 200));
   $$('[data-filter]').forEach(b => b.addEventListener('click', () => { filter = b.dataset.filter; $$('[data-filter]').forEach(x => x.classList.toggle('is-active', x === b)); renderDiary(); }));
   $$('[data-mode]').forEach(b => b.addEventListener('click', () => { mode = b.dataset.mode; $$('[data-mode]').forEach(x => x.classList.toggle('is-active', x === b)); renderDiary(); }));
-
   function renderCalendar() {
     const today = new Date(); if (!calMonth) calMonth = new Date(today.getFullYear(), today.getMonth(), 1);
     const y = calMonth.getFullYear(), m = calMonth.getMonth();
     const first = new Date(y, m, 1).getDay(); const days = new Date(y, m + 1, 0).getDate();
-    const byDay = new Map(); Store.state.entries.forEach(e => { if (!byDay.has(e.date)) byDay.set(e.date, []); byDay.get(e.date).push(e); });
+    const byDay = new Map(); D().entries.forEach(e => { if (!byDay.has(e.date)) byDay.set(e.date, []); byDay.get(e.date).push(e); });
     const p = n => String(n).padStart(2, '0'); const todayISO = Store.todayISO();
     let cells = '';
     for (let i = 0; i < first; i++) cells += '<span class="cal-day is-empty"></span>';
@@ -326,7 +335,7 @@
     $('#diaryCalendar').innerHTML = `
       <div class="cal-head"><button type="button" class="icon-btn" id="calPrev" aria-label="prev">${ICONS.get('chevronLeft')}</button><div class="cal-title">${esc(title)}</div><div class="row gap"><button type="button" class="btn btn-ghost" id="calToday">${esc(t('cal.today'))}</button><button type="button" class="icon-btn" id="calNext" aria-label="next">${ICONS.get('chevronRight')}</button></div></div>
       <div class="cal-grid">${dows.map((d, i) => `<span class="cal-dow ${i === 0 ? 'sun' : i === 6 ? 'sat' : ''}">${d}</span>`).join('')}${cells}</div>
-      ${calSelected ? `<div class="cal-list"><h3 class="sub-title">${esc(t('diary.dayEntries', { date: fmtJa(calSelected) }))}</h3><div class="entries-grid">${sel.length ? sel.map(entryCard).join('') : `<div class="empty" style="padding:16px"><p>${esc(t('diary.noDay'))}</p><a class="btn btn-primary" href="#write/date-${calSelected}">${ICONS.get('pen')}<span>${esc(t('diary.writeDay'))}</span></a></div>`}</div></div>` : ''}`;
+      ${calSelected ? `<div class="cal-list"><h3 class="sub-title">${esc(t('diary.dayEntries', { date: fmtJa(calSelected) }))}</h3><div class="entries-grid">${sel.length ? sel.map(entryCard).join('') : `<div class="empty" style="padding:16px"><p>${esc(t('diary.noDay'))}</p><a class="btn btn-primary" href="#write/date-${calSelected}" data-edit-only>${ICONS.get('pen')}<span>${esc(t('diary.writeDay'))}</span></a></div>`}</div></div>` : ''}`;
     $('#calPrev').onclick = () => { calMonth = new Date(y, m - 1, 1); renderCalendar(); };
     $('#calNext').onclick = () => { calMonth = new Date(y, m + 1, 1); renderCalendar(); };
     $('#calToday').onclick = () => { calMonth = new Date(today.getFullYear(), today.getMonth(), 1); calSelected = todayISO; renderCalendar(); };
@@ -336,13 +345,13 @@
   /* ---------- WORDS ---------- */
   let practice = { order: [], i: 0, flipped: false };
   function renderWords() {
-    const w = Store.state.words;
+    const w = D().words;
     $('#wordsCount').textContent = t('words.count', { n: w.length });
     $('#wordsList').innerHTML = w.length ? w.map(x => `<div class="clay word-card"><div class="word-main"><div class="word-text">${esc(x.word)}</div>${x.reading ? `<div class="word-reading">${esc(x.reading)}</div>` : ''}<div class="word-meaning">${esc(x.meaning)}</div></div><button type="button" class="icon-btn is-danger" data-edit-only data-del-word="${x.id}" aria-label="${esc(t('diary.delete'))}">${ICONS.get('trash')}</button></div>`).join('') : `<div class="empty">${ICONS.stickers.dango}<p>${esc(t('words.empty'))}</p></div>`;
     renderPractice();
   }
   function renderPractice() {
-    const w = Store.state.words; const area = $('#practiceArea');
+    const w = D().words; const area = $('#practiceArea');
     if (w.length < 3) { area.innerHTML = `<p class="muted">${esc(t('words.practiceEmpty'))}</p>`; return; }
     if (!practice.order.length || practice.order.some(id => !w.find(x => x.id === id))) shufflePractice();
     const cur = w.find(x => x.id === practice.order[practice.i]) || w[0];
@@ -353,37 +362,38 @@
     $('#fcPrev').onclick = () => { practice.i = (practice.i - 1 + practice.order.length) % practice.order.length; practice.flipped = false; renderPractice(); };
     $('#fcShuffle').onclick = () => { shufflePractice(); renderPractice(); };
   }
-  function shufflePractice() { const ids = Store.state.words.map(x => x.id); for (let i = ids.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [ids[i], ids[j]] = [ids[j], ids[i]]; } practice = { order: ids, i: 0, flipped: false }; }
-  $('#wordForm').addEventListener('submit', ev => {
+  function shufflePractice() { const ids = D().words.map(x => x.id); for (let i = ids.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [ids[i], ids[j]] = [ids[j], ids[i]]; } practice = { order: ids, i: 0, flipped: false }; }
+  $('#wordForm').addEventListener('submit', async ev => {
     ev.preventDefault();
+    if (!Auth.canEdit()) { openUnlock(); return; }
     const word = $('#wordText').value.trim();
     if (!word) { $('#wordError').textContent = t('words.needWord'); $('#wordError').hidden = false; $('#wordText').setAttribute('aria-invalid', 'true'); $('#wordText').focus(); return; }
     $('#wordError').hidden = true; $('#wordText').removeAttribute('aria-invalid');
     Store.addWord({ word, reading: $('#wordReading').value, meaning: $('#wordMeaning').value });
     ev.target.reset(); $('#wordText').focus();
-    toast(t('words.added')); renderWords(); renderHome();
-    if (Store.state.github.autosync) autoPush();
+    renderWords(); renderHome();
+    if (await persist(`diary: new word ${word}`)) toast(t('words.added'));
   });
-  $('#wordsList').addEventListener('click', async ev => { const b = ev.target.closest('[data-del-word]'); if (!b) return; if (await confirmDlg(t('diary.delete'), t('words.deleteConfirm'))) { Store.deleteWord(b.dataset.delWord); renderWords(); renderHome(); } });
+  $('#wordsList').addEventListener('click', async ev => { const b = ev.target.closest('[data-del-word]'); if (!b) return; if (await confirmDlg(t('diary.delete'), t('words.deleteConfirm'))) { Store.deleteWord(b.dataset.delWord); renderWords(); renderHome(); persist(); } });
 
   /* ---------- SETTINGS ---------- */
   function renderSettings() {
-    const s = Store.state;
-    $('#profileName').value = s.profile.name; $('#profileLang').value = s.profile.lang; $('#petalsToggle').checked = s.profile.petals;
-    $('#themeGrid').innerHTML = THEMES.map(([k, c, label]) => `<button type="button" class="theme-card ${k === s.profile.theme ? 'is-active' : ''}" data-theme="${k}"><span class="swatch" style="background:${c}"></span><span>${label}</span></button>`).join('');
-    $('#themeDots').innerHTML = THEMES.map(([k, c, label]) => `<button type="button" class="theme-dot ${k === s.profile.theme ? 'is-active' : ''}" data-theme="${k}" style="background:${c}" aria-label="${label}" title="${label}"></button>`).join('');
-    const g = s.github; $('#ghOwner').value = g.owner; $('#ghRepo').value = g.repo; $('#ghBranch').value = g.branch; $('#ghPath').value = g.path; $('#ghToken').value = g.token; $('#ghAutosync').checked = g.autosync;
+    const s = Store.settings, g = Store.github, st = Store.state;
+    $('#profileName').value = D().profile.name; $('#profileLang').value = s.lang; $('#petalsToggle').checked = s.petals;
+    $('#themeGrid').innerHTML = THEMES.map(([k, c, label]) => `<button type="button" class="theme-card ${k === s.theme ? 'is-active' : ''}" data-theme="${k}"><span class="swatch" style="background:${c}"></span><span>${label}</span></button>`).join('');
+    $('#themeDots').innerHTML = THEMES.map(([k, c, label]) => `<button type="button" class="theme-dot ${k === s.theme ? 'is-active' : ''}" data-theme="${k}" style="background:${c}" aria-label="${label}" title="${label}"></button>`).join('');
+    if (document.activeElement !== $('#ghToken')) { $('#ghOwner').value = g.owner; $('#ghRepo').value = g.repo; $('#ghBranch').value = g.branch; $('#ghPath').value = g.path; $('#ghToken').value = g.token; }
     setSyncStatus(g.lastSync ? `${t('settings.gh.lastSync')}: ${fmtTime(g.lastSync)}` : `${t('settings.gh.lastSync')}: ${t('settings.gh.never')}`);
-    $('#snapList').innerHTML = s.snapshots.length ? s.snapshots.map((sn, i) => `<li><span>${esc(fmtTime(sn.at))} · ${sn.entries.length} / ${sn.words.length}</span><button type="button" class="btn btn-soft" data-restore="${i}">${esc(t('settings.restore'))}</button></li>`).join('') : `<li class="muted">${esc(t('settings.snapEmpty'))}</li>`;
-    $('#storageInfo').textContent = t('settings.storage', { kb: Store.storageKB() });
+    $('#dataSource').textContent = st.loadedAt ? `${t(st.source === 'api' ? 'sync.sourceApi' : 'sync.sourceSite')} · ${t('sync.loadedAt', { time: fmtTime(st.loadedAt) })}` : '';
+    $('#storageInfo').textContent = `${D().entries.length} / ${D().words.length}`;
     renderLockCard();
   }
-  $('#profileName').addEventListener('change', ev => { Store.setProfile({ name: ev.target.value.trim() || 'レイハーネ' }); renderHome(); toast(t('settings.saved')); });
-  $('#profileLang').addEventListener('change', ev => { Store.setProfile({ lang: ev.target.value }); applyLang(ev.target.value); });
-  $('#langSelect').addEventListener('change', ev => { Store.setProfile({ lang: ev.target.value }); applyLang(ev.target.value); });
-  $('#petalsToggle').addEventListener('change', ev => { Store.setProfile({ petals: ev.target.checked }); renderPetals(ev.target.checked); });
-  document.addEventListener('click', ev => { const b = ev.target.closest('.theme-card, .theme-dot'); if (!b) return; Store.setProfile({ theme: b.dataset.theme }); applyTheme(b.dataset.theme); if (b.dataset.theme === 'yozora') { Store.markEarned(['night']); renderHome(); } });
-  $('#snapList').addEventListener('click', async ev => { const b = ev.target.closest('[data-restore]'); if (!b) return; const sn = Store.state.snapshots[+b.dataset.restore]; if (!sn) return; if (await confirmDlg(t('settings.restore'), t('settings.restoreConfirm'), { danger: false })) { const n = Store.merge({ entries: sn.entries, words: sn.words }); toast(t('settings.imported', { n })); renderAll(); } });
+  $('#profileName').addEventListener('change', ev => { if (!Auth.canEdit()) { renderSettings(); return openUnlock(); } Store.setName(ev.target.value); renderHome(); persist('diary: rename'); });
+  $('#profileLang').addEventListener('change', ev => { Store.setSettings({ lang: ev.target.value }); applyLang(ev.target.value); });
+  $('#langSelect').addEventListener('change', ev => { Store.setSettings({ lang: ev.target.value }); applyLang(ev.target.value); });
+  $('#petalsToggle').addEventListener('change', ev => { Store.setSettings({ petals: ev.target.checked }); renderPetals(ev.target.checked); });
+  document.addEventListener('click', ev => { const b = ev.target.closest('.theme-card, .theme-dot'); if (!b) return; Store.setSettings({ theme: b.dataset.theme }); applyTheme(b.dataset.theme); });
+  $('#refreshBtn').addEventListener('click', async () => { if (await loadData()) { route(); toast(t('settings.gh.pulled', { n: D().entries.length })); } });
 
   // export / import
   $('#exportBtn').addEventListener('click', () => {
@@ -394,46 +404,21 @@
   $('#importFile').addEventListener('change', async ev => {
     const file = ev.target.files[0]; ev.target.value = ''; if (!file) return;
     try {
-      const payload = Store.parsePayload(JSON.parse(await file.text()));
-      if (!payload) throw new Error('bad');
-      if (await confirmDlg(t('settings.importTitle'), t('settings.importConfirm', { n: payload.entries.length }), { danger: false })) { const n = Store.merge(payload); toast(t('settings.imported', { n })); renderAll(); }
+      const obj = JSON.parse(await file.text()); const inc = Store.normalizeData(obj); if (!inc) throw new Error('bad');
+      if (await confirmDlg(t('settings.importTitle'), t('settings.importConfirm', { n: inc.entries.length }), { danger: false })) { const n = Store.importData(obj); renderAll(); if (await persist('diary: import file')) toast(t('settings.imported', { n })); }
     } catch (e) { toast(t('settings.importBad'), { type: 'err' }); }
   });
 
   // GitHub
-  function ghCfgFromForm() { return { owner: $('#ghOwner').value.trim(), repo: $('#ghRepo').value.trim(), branch: $('#ghBranch').value.trim() || 'main', path: $('#ghPath').value.trim() || 'data/diary.json', token: $('#ghToken').value.trim(), autosync: $('#ghAutosync').checked }; }
+  function ghCfgFromForm() { return { owner: $('#ghOwner').value.trim() || CONFIG.owner, repo: $('#ghRepo').value.trim() || CONFIG.repo, branch: $('#ghBranch').value.trim() || 'main', path: $('#ghPath').value.trim() || 'data/diary.json', token: $('#ghToken').value.trim() }; }
   function setSyncStatus(msg, cls = '') { const el = $('#ghStatus'); el.textContent = msg; el.className = 'sync-status ' + cls; }
-  function ghErrorMsg(e) { const map = { auth: 'settings.gh.auth', notfound: 'settings.gh.notfound', conflict: 'settings.gh.conflict', missing: 'settings.gh.missing' }; return map[e.code] ? t(map[e.code]) : t('settings.gh.error', { msg: e.message || '' }); }
   $('#ghTokenToggle').addEventListener('click', () => { const i = $('#ghToken'); const show = i.type === 'password'; i.type = show ? 'text' : 'password'; $('#ghTokenToggle').innerHTML = ICONS.get(show ? 'eyeOff' : 'eye'); });
-  $('#ghSaveBtn').addEventListener('click', () => { Store.setGithub(ghCfgFromForm()); toast(t('settings.saved')); });
-  $('#ghAutosync').addEventListener('change', () => Store.setGithub({ autosync: $('#ghAutosync').checked }));
-  async function doPush(silent) {
-    const cfg = ghCfgFromForm(); Store.setGithub(cfg);
-    if (!GitHubSync.ok(cfg)) { setSyncStatus(t('settings.gh.missing'), 'is-err'); if (!silent) toast(t('settings.gh.missing'), { type: 'err' }); return; }
-    const btn = $('#ghPushBtn'); btn.setAttribute('aria-busy', 'true'); setSyncStatus(t('settings.gh.pushing'));
-    try { await GitHubSync.push(cfg, Store.exportPayload()); Store.setGithub({ lastSync: Store.nowISO() }); setSyncStatus(`${t('settings.gh.pushed')} · ${fmtTime(Store.state.github.lastSync)}`, 'is-ok'); if (!silent) toast(t('settings.gh.pushed')); }
-    catch (e) { console.error(e); setSyncStatus(ghErrorMsg(e), 'is-err'); toast(ghErrorMsg(e), { type: 'err' }); }
-    finally { btn.removeAttribute('aria-busy'); }
-  }
-  async function doPull() {
-    const cfg = ghCfgFromForm(); Store.setGithub(cfg);
-    if (!GitHubSync.ok(cfg)) { setSyncStatus(t('settings.gh.missing'), 'is-err'); toast(t('settings.gh.missing'), { type: 'err' }); return; }
-    const btn = $('#ghPullBtn'); btn.setAttribute('aria-busy', 'true'); setSyncStatus(t('settings.gh.pulling'));
-    try {
-      const json = await GitHubSync.pull(cfg);
-      const payload = json && Store.parsePayload(json);
-      if (!payload) { setSyncStatus(t('settings.gh.nothing')); toast(t('settings.gh.nothing')); return; }
-      const n = Store.merge(payload); Store.setGithub({ lastSync: Store.nowISO() });
-      setSyncStatus(t('settings.gh.pulled', { n }), 'is-ok'); toast(t('settings.gh.pulled', { n })); renderAll();
-    } catch (e) { console.error(e); setSyncStatus(ghErrorMsg(e), 'is-err'); toast(ghErrorMsg(e), { type: 'err' }); }
-    finally { btn.removeAttribute('aria-busy'); }
-  }
-  $('#ghPushBtn').addEventListener('click', () => doPush(false));
-  $('#ghPullBtn').addEventListener('click', doPull);
-  const autoPush = debounce(() => { if (GitHubSync.ok(Store.state.github)) doPush(true); }, 1500);
+  $('#ghSaveBtn').addEventListener('click', async () => { Store.setGithub(ghCfgFromForm()); toast(t('settings.saved')); if (await loadData()) { route(); } });
+  $('#ghPushBtn').addEventListener('click', () => { Store.setGithub(ghCfgFromForm()); Store.state.dirty = true; persist('diary: manual push'); });
+  $('#ghPullBtn').addEventListener('click', async () => { Store.setGithub(ghCfgFromForm()); if (await loadData()) { route(); toast(t('settings.gh.pulled', { n: D().entries.length })); } });
 
   // wipe
-  $('#wipeBtn').addEventListener('click', async () => { if (await confirmDlg(t('settings.wipeTitle'), t('settings.wipeConfirm'))) { Store.wipe(); resetWriteForm(); renderAll(); toast(t('settings.wiped')); } });
+  $('#wipeBtn').addEventListener('click', async () => { if (await confirmDlg(t('settings.wipeTitle'), t('settings.wipeConfirm'))) { Store.wipe(); resetWriteForm(); renderAll(); if (await persist('diary: wipe')) toast(t('settings.wiped')); } });
 
   /* ---------- Editor lock ---------- */
   function applyLockUI() {
@@ -462,6 +447,7 @@
     btn.removeAttribute('aria-busy');
     if (!ok) { $('#unlockError').textContent = t('lock.wrong'); $('#unlockError').hidden = false; $('#unlockPw').setAttribute('aria-invalid', 'true'); $('#unlockPw').select(); return; }
     $('#dlgUnlock').close(); renderAll(); toast(t('lock.unlockedToast'));
+    if (!Sync.hasToken()) toast(t('sync.needToken'), { type: 'err', ms: 7000 });
     const cb = unlockCallback; unlockCallback = null; if (cb) cb();
   });
   $('#unlockCancel').addEventListener('click', () => { unlockCallback = null; $('#dlgUnlock').close(); });
@@ -476,7 +462,6 @@
   $('#lockBtn').addEventListener('click', toggleLock);
   $('#bannerUnlockBtn').addEventListener('click', () => openUnlock());
   $('#settingsUnlockBtn').addEventListener('click', () => openUnlock());
-
   function renderLockCard() {
     const has = Auth.hasPassword(), unlocked = Auth.isUnlocked();
     const st = $('#lockState'); st.textContent = has ? t('lock.hasPw') : t('lock.noPw'); st.className = 'lock-state ' + (has ? 'is-on' : 'is-off');
@@ -497,41 +482,45 @@
     await Auth.setPassword(nw, $('#pwHint').value);
     btn.removeAttribute('aria-busy');
     $('#pwCurrent').value = ''; $('#pwNew').value = ''; $('#pwConfirm').value = '';
-    toast(t('lock.saved')); renderAll();
-    if (Store.state.github.autosync) autoPush();
+    renderAll(); if (await persist('diary: change password')) toast(t('lock.saved'));
   });
   $('#pwRemoveBtn').addEventListener('click', async () => {
     $('#pwError').hidden = true;
     if (!(await Auth.verify($('#pwCurrent').value))) return pwError(t('lock.wrong'), $('#pwCurrent'));
-    if (await confirmDlg(t('lock.remove'), t('lock.removeConfirm'))) { Auth.removePassword(); $('#pwCurrent').value = ''; toast(t('lock.removed')); renderAll(); if (Store.state.github.autosync) autoPush(); }
+    if (await confirmDlg(t('lock.remove'), t('lock.removeConfirm'))) { Auth.removePassword(); $('#pwCurrent').value = ''; renderAll(); if (await persist('diary: remove password')) toast(t('lock.removed')); }
   });
 
-  /* ---------- Seed from repo data (deployed site, first visit) ---------- */
-  async function trySeed() {
-    const s = Store.state; if (s.seeded || s.entries.length || location.protocol === 'file:') return;
-    try {
-      const res = await fetch('data/diary.json', { cache: 'no-store' }); if (!res.ok) return;
-      const payload = Store.parsePayload(await res.json()); if (!payload || !payload.entries.length) return;
-      if (await confirmDlg(t('seed.title'), t('seed.text', { n: payload.entries.length }), { danger: false })) { Store.merge(payload); renderAll(); }
-    } catch (e) { /* offline or no file */ }
-    finally { s.seeded = true; Store.save(); }
-  }
-
   /* ---------- Init ---------- */
-  function init() {
-    const s = Store.state;
+  async function init() {
+    const s = Store.settings;
     hydrateIcons();
     $('#brandMascot').innerHTML = ICONS.mascot; $('#heroMascot').innerHTML = ICONS.mascot;
-    applyTheme(s.profile.theme); renderPetals(s.profile.petals);
-    I18N.setLang(s.profile.lang); $('#langSelect').value = s.profile.lang;
-    renderNav(); renderAll();
-    if (s.draft && !editingId) { fillForm(s.draft); $('#draftNote').textContent = t('write.draft'); } else resetWriteForm();
-    window.addEventListener('hashchange', route); route();
-    Store.subscribe(() => { $('#storageInfo').textContent = t('settings.storage', { kb: Store.storageKB() }); });
+    applyTheme(s.theme); renderPetals(s.petals);
+    I18N.setLang(s.lang); $('#langSelect').value = s.lang;
+    renderNav(); updateBrand();
+    window.addEventListener('hashchange', route);
     window.addEventListener('offline', () => toast(t('offline')));
-    reducedMotion.addEventListener?.('change', () => renderPetals(Store.state.profile.petals));
-    trySeed();
+    reducedMotion.addEventListener?.('change', () => renderPetals(Store.settings.petals));
     if ('serviceWorker' in navigator && location.protocol !== 'file:') navigator.serviceWorker.register('sw.js').catch(() => {});
+    route(); // marks nav while loading
+    if (await loadData()) {
+      const draft = Store.getDraft();
+      if (draft) { fillForm(draft); $('#draftNote').textContent = t('write.draft'); } else resetWriteForm();
+      route();
+      migrateOldLocal();
+    }
+  }
+  /* One-time: entries written by the old localStorage version of the app (key reyhane.diary.v1) */
+  function migrateOldLocal() {
+    let old = null; try { old = JSON.parse(localStorage.getItem('reyhane.diary.v1')); } catch (e) {}
+    if (!old || !Array.isArray(old.entries)) return;
+    const have = new Set(D().entries.map(e => e.id)); const fresh = old.entries.filter(e => !have.has(e.id));
+    if (!fresh.length) { try { localStorage.removeItem('reyhane.diary.v1'); } catch (e) {} return; }
+    toast(t('migrate.found', { n: fresh.length }), { ms: 12000, action: t('migrate.import'), onAction: async () => {
+      if (!Auth.canEdit()) return openUnlock(() => migrateOldLocal());
+      Store.importData({ entries: fresh, words: old.words || [] }); renderAll();
+      if (await persist('diary: import from old device data')) { toast(t('settings.imported', { n: fresh.length })); try { localStorage.removeItem('reyhane.diary.v1'); } catch (e) {} }
+    } });
   }
   document.readyState === 'loading' ? document.addEventListener('DOMContentLoaded', init) : init();
 })();

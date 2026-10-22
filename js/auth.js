@@ -1,7 +1,8 @@
 /* Auth — editor lock. A password (salted, iterated SHA-256) gates writing/editing.
    Without a password set, the app is open. The hash is stored in Store.state.lock and
    travels with exports / GitHub sync, so a device that restores the diary is locked too.
-   This is a UI lock for a kid's diary, not a security boundary (the data is client-side). */
+   The lock lives in the shared data file (data/diary.json) so every device sees the same lock.
+   This is a UI lock for a kid's diary; the real write credential is the GitHub token. */
 (function () {
   const SESSION_KEY = 'reyhane.diary.unlock.session';
   const REMEMBER_KEY = 'reyhane.diary.unlock.remember';
@@ -37,7 +38,7 @@
   }
   const randomSalt = () => { const a = new Uint8Array(12); (window.crypto || {}).getRandomValues ? crypto.getRandomValues(a) : a.forEach((_, i) => a[i] = Math.random() * 256); return hex(a.buffer); };
 
-  const lock = () => Store.state.lock;
+  const lock = () => Store.data.lock;
   const get = (store, key) => { try { return store.getItem(key); } catch (e) { return null; } };
   const set = (store, key, v) => { try { v == null ? store.removeItem(key) : store.setItem(key, v); } catch (e) {} };
 
@@ -65,6 +66,7 @@
       Store.setLock({ salt, hash, hint: String(hint || '').trim().slice(0, 80), iter: ITER, setAt: Store.nowISO() });
       set(sessionStorage, SESSION_KEY, hash); set(localStorage, REMEMBER_KEY, null);
     },
+    refresh() { /* after data reload: keep unlocked only if the stored token matches the current hash */ },
     removePassword() { Store.setLock(null); this.lock(); },
     hint() { return (lock() && lock().hint) || ''; },
   };

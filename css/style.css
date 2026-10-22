@@ -531,3 +531,16 @@ html[data-locked="1"] [data-edit-only] { display: none !important; }
 .lock-state::before { content: ""; width: 10px; height: 10px; border-radius: 50%; background: var(--text-muted); }
 .lock-state.is-on::before { background: var(--success); }
 .lock-state.is-off::before { background: var(--accent); }
+
+/* ---------- Loading & sync states ---------- */
+.load-state { display: flex; align-items: center; gap: var(--s-3); padding: var(--s-4) var(--s-5); margin-bottom: var(--s-4); font-weight: 700; color: var(--text-muted); }
+.load-state.is-error { color: var(--danger); background: var(--danger-soft); }
+.load-state.is-error .spinner { display: none; }
+.spinner { width: 22px; height: 22px; border-radius: 50%; border: 3px solid var(--primary-soft); border-top-color: var(--primary); animation: spin .8s linear infinite; flex: none; }
+.spinner-sm { width: 14px; height: 14px; border-width: 2px; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.sync-chip { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: var(--r-pill); background: var(--accent-soft); font-size: var(--fs-xs); font-weight: 700; }
+.sync-chip.is-ok { background: var(--secondary-soft); } .sync-chip.is-ok .spinner { display: none; }
+.sync-chip.is-err { background: var(--danger-soft); color: var(--danger); } .sync-chip.is-err .spinner { display: none; }
+@media (max-width: 559px) { .sync-chip span:last-child { display: none; } .sync-chip { padding: 6px 8px; } }
+html[data-loading="1"] .view { display: none !important; }

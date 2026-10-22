@@ -1,6 +1,6 @@
 /* Service worker — app shell cache-first, data network-first. */
-const VERSION = 'reyhane-diary-v2';
-const SHELL = ['./', './index.html', './css/style.css', './js/i18n.js', './js/icons.js', './js/store.js', './js/github.js', './js/auth.js', './js/app.js', './manifest.webmanifest', './assets/icon.svg'];
+const VERSION = 'reyhane-diary-v3';
+const SHELL = ['./', './index.html', './css/style.css', './js/config.js', './js/i18n.js', './js/icons.js', './js/store.js', './js/github.js', './js/auth.js', './js/app.js', './manifest.webmanifest', './assets/icon.svg'];
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(VERSION).then(c => c.addAll(SHELL)).then(() => self.skipWaiting()));

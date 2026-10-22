@@ -29,6 +29,7 @@
         </span>
       </a>
       <div class="topbar-actions">
+        <span class="sync-chip" id="syncChip" hidden aria-live="polite"><span class="spinner spinner-sm" aria-hidden="true"></span><span id="syncChipText"></span></span>
         <button type="button" class="lock-btn" id="lockBtn" aria-pressed="false"><span class="lock-ico" data-icon="unlock"></span><span class="lock-label" id="lockLabel"></span></button>
         <div class="theme-dots" role="group" aria-label="Theme" id="themeDots"></div>
         <label class="lang-select">
@@ -45,6 +46,7 @@
     <nav class="sidenav clay" id="sidenav" aria-label="Main navigation"></nav>
 
     <main id="main" class="main" tabindex="-1">
+      <div class="load-state clay" id="loadState"><span class="spinner" aria-hidden="true"></span><span id="loadText" data-i18n="sync.loading">にっきを よみこみ中…</span><button type="button" class="btn btn-soft" id="loadRetry" hidden><span class="btn-ico" data-icon="refresh"></span><span data-i18n="sync.retry">もういちど</span></button></div>
       <!-- HOME -->
       <section class="view" id="view-home" data-view="home" hidden>
         <div class="lock-banner clay" id="lockBanner" hidden><span data-icon="lock"></span><span data-i18n="lock.readonly">いまは よむだけモード。書くには ロックをかいじょしてね。</span><button type="button" class="btn btn-primary" id="bannerUnlockBtn"><span class="btn-ico" data-icon="key"></span><span data-i18n="lock.unlock">ロックをかいじょ</span></button></div>
@@ -223,18 +225,18 @@
 
           <div class="clay card">
             <h2 class="card-title"><span class="card-ico" data-icon="save"></span><span data-i18n="settings.backup">バックアップ</span></h2>
-            <p class="muted small" data-i18n="settings.backupHelp">にっきは このデバイスの中（localStorage）にほぞんされているよ。ときどきファイルにも ほぞんしておこう。</p>
+            <p class="muted small" data-i18n="settings.backupHelp2">にっきは GitHubに ほぞんされているよ。ファイルにも コピーを とっておける。</p>
             <div class="row gap wrap">
               <button class="btn btn-secondary" id="exportBtn"><span class="btn-ico" data-icon="download"></span><span data-i18n="settings.export">ファイルにほぞん</span></button>
               <label class="btn btn-soft file-btn" data-edit-only><span class="btn-ico" data-icon="upload"></span><span data-i18n="settings.import">ファイルからもどす</span><input type="file" id="importFile" accept="application/json,.json" hidden></label>
             </div>
-            <h3 class="sub-title" data-i18n="settings.snapshots">じどうバックアップ</h3>
-            <ul class="snap-list" id="snapList" data-edit-only></ul>
+            <p class="muted small" id="dataSource" style="margin-top:12px"></p>
+            <button type="button" class="btn btn-ghost" id="refreshBtn"><span class="btn-ico" data-icon="refresh"></span><span data-i18n="sync.refresh">さいしんにする</span></button>
           </div>
 
           <div class="clay card gh-card" data-edit-only>
             <h2 class="card-title"><span class="card-ico" data-icon="cloud"></span><span data-i18n="settings.github">GitHub どうき</span></h2>
-            <p class="muted small" data-i18n="settings.gh.help">GitHubのリポジトリを「データベース」にして、にっきをクラウドにもほぞんできるよ。（大人の人といっしょにせっていしてね）</p>
+            <p class="muted small" data-i18n="settings.gh.help2">このサイトの にっきは GitHubの data/diary.json に ほぞんされているよ。書きこむには トークンが ひつよう。</p>
             <div class="field-row">
               <div class="field grow"><label for="ghOwner" data-i18n="settings.gh.owner">ユーザー名</label><input id="ghOwner" type="text" placeholder="username" autocomplete="off" spellcheck="false"></div>
               <div class="field grow"><label for="ghRepo" data-i18n="settings.gh.repo">リポジトリ</label><input id="ghRepo" type="text" placeholder="reyhane-diary" autocomplete="off" spellcheck="false"></div>
@@ -251,7 +253,6 @@
               </div>
               <p class="helper" data-i18n="settings.gh.tokenHelp">Fine-grained token · Contents: Read and write</p>
             </div>
-            <label class="check"><input type="checkbox" id="ghAutosync"><span class="check-box" aria-hidden="true"><span data-icon="check"></span></span><span data-i18n="settings.gh.autosync">ほぞんのたびに自動でおくる</span></label>
             <div class="row gap wrap">
               <button class="btn btn-soft" id="ghSaveBtn"><span class="btn-ico" data-icon="check"></span><span data-i18n="settings.gh.save">せっていをほぞん</span></button>
               <button class="btn btn-primary" id="ghPushBtn"><span class="btn-ico" data-icon="cloudUp"></span><span data-i18n="settings.gh.push">GitHubへおくる</span></button>
@@ -335,6 +336,7 @@
     </form>
   </dialog>
 
+  <script src="js/config.js"></script>
   <script src="js/i18n.js"></script>
   <script src="js/icons.js"></script>
   <script src="js/store.js"></script>

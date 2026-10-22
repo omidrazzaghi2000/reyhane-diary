@@ -1,176 +1,103 @@
-/* Store — single source of truth, persisted in localStorage.
-   Shape: { version, profile, entries[], words[], github, snapshots[], draft, seeded } */
+/* Store — the diary lives in ONE shared JSON file in the GitHub repo (data/diary.json).
+   In memory here; loaded/saved by Sync. localStorage only keeps device settings
+   (theme, language, GitHub token, remembered unlock) — never the diary itself. */
 (function () {
-  const KEY = 'reyhane.diary.v1';
-  const MAX_SNAPSHOTS = 5;
-
-  const defaults = () => ({
-    version: 1,
-    profile: { name: 'レイハーネ', theme: 'sakura', lang: 'ja', petals: true, themeSet: false },
-    entries: [],
-    words: [],
-    github: { owner: '', repo: '', branch: 'main', path: 'data/diary.json', token: '', autosync: false, lastSync: null },
-    snapshots: [],
-    draft: null,
-    seeded: false,
-    earned: [],
-    lock: null,
-  });
-
-  const listeners = new Set();
-  let state = load();
-
-  function load() {
-    try {
-      const raw = localStorage.getItem(KEY);
-      if (!raw) return defaults();
-      const parsed = JSON.parse(raw);
-      const d = defaults();
-      return {
-        ...d, ...parsed,
-        profile: { ...d.profile, ...(parsed.profile || {}) },
-        github: { ...d.github, ...(parsed.github || {}) },
-        entries: Array.isArray(parsed.entries) ? parsed.entries : [],
-        words: Array.isArray(parsed.words) ? parsed.words : [],
-        snapshots: Array.isArray(parsed.snapshots) ? parsed.snapshots : [],
-        earned: Array.isArray(parsed.earned) ? parsed.earned : [],
-        lock: parsed.lock && parsed.lock.hash ? parsed.lock : null,
-      };
-    } catch (e) {
-      console.warn('store: could not parse, starting fresh', e);
-      return defaults();
-    }
-  }
-
-  function save() {
-    try {
-      localStorage.setItem(KEY, JSON.stringify(state));
-    } catch (e) {
-      // quota exceeded → drop snapshots and retry once
-      state.snapshots = [];
-      try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e2) { console.error('store: cannot save', e2); }
-    }
-    listeners.forEach(fn => { try { fn(state); } catch (e) { console.error(e); } });
-  }
+  const SETTINGS_KEY = 'reyhane.diary.settings.v2';
+  const GH_KEY = 'reyhane.diary.github.v2';
+  const DRAFT_KEY = 'reyhane.diary.draft.v2';
 
   const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
   const nowISO = () => new Date().toISOString();
-  function todayISO(d = new Date()) {
-    const p = n => String(n).padStart(2, '0');
-    return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
-  }
+  function todayISO(d = new Date()) { const p = n => String(n).padStart(2, '0'); return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`; }
+  const clone = o => JSON.parse(JSON.stringify(o));
+  const loadLS = (k, d) => { try { const v = JSON.parse(localStorage.getItem(k)); return v && typeof v === 'object' ? { ...d, ...v } : { ...d }; } catch (e) { return { ...d }; } };
+  const saveLS = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} };
 
-  /* Daily snapshot before first mutation of the day */
-  function snapshot(force) {
-    const today = todayISO();
-    const last = state.snapshots[0];
-    if (!force && last && last.date === today) return;
-    if (!state.entries.length && !state.words.length) return;
-    state.snapshots.unshift({ date: today, at: nowISO(), entries: JSON.parse(JSON.stringify(state.entries)), words: JSON.parse(JSON.stringify(state.words)) });
-    state.snapshots = state.snapshots.slice(0, MAX_SNAPSHOTS);
-  }
+  const emptyData = () => ({ app: 'reyhane-diary', version: 2, profile: { name: 'レイハーネ' }, entries: [], words: [], deleted: [], lock: null, updatedAt: null });
 
-  /* ---- Entries ---- */
+  const state = {
+    data: emptyData(),
+    settings: loadLS(SETTINGS_KEY, { theme: 'sakura', lang: 'ja', petals: true }),
+    github: loadLS(GH_KEY, { owner: CONFIG.owner, repo: CONFIG.repo, branch: CONFIG.branch, path: CONFIG.path, token: '', lastSync: null }),
+    remoteSha: null, loaded: false, source: null, loadedAt: null, dirty: false, saving: false,
+  };
+  const listeners = new Set();
+  const emit = () => listeners.forEach(fn => { try { fn(state); } catch (e) { console.error(e); } });
+
+  /* ---- normalize / merge ---- */
   function normalizeEntry(e) {
     return {
-      id: e.id || uid(),
-      date: e.date || todayISO(),
-      title: String(e.title || '').trim(),
-      body: String(e.body || ''),
-      mood: e.mood || 'happy',
-      weather: e.weather || 'sunny',
+      id: e.id || uid(), date: e.date || todayISO(), title: String(e.title || '').trim(), body: String(e.body || ''),
+      mood: e.mood || 'happy', weather: e.weather || 'sunny',
       tags: Array.isArray(e.tags) ? e.tags.map(t => String(t).trim()).filter(Boolean) : [],
-      favorite: !!e.favorite,
-      createdAt: e.createdAt || nowISO(),
-      updatedAt: e.updatedAt || nowISO(),
+      favorite: !!e.favorite, createdAt: e.createdAt || nowISO(), updatedAt: e.updatedAt || e.createdAt || nowISO(),
     };
   }
-  function sortEntries() {
-    state.entries.sort((a, b) => (b.date + b.createdAt).localeCompare(a.date + a.createdAt));
-  }
-  function addEntry(data) {
-    snapshot();
-    const e = normalizeEntry({ ...data, id: undefined, createdAt: undefined, updatedAt: undefined });
-    state.entries.push(e); sortEntries(); state.draft = null; save(); return e;
-  }
-  function updateEntry(id, data) {
-    const i = state.entries.findIndex(e => e.id === id);
-    if (i < 0) return null;
-    snapshot();
-    const e = normalizeEntry({ ...state.entries[i], ...data, id, updatedAt: nowISO() });
-    state.entries[i] = e; sortEntries(); state.draft = null; save(); return e;
-  }
-  function deleteEntry(id) {
-    const i = state.entries.findIndex(e => e.id === id);
-    if (i < 0) return null;
-    snapshot();
-    const [removed] = state.entries.splice(i, 1); save(); return removed;
-  }
-  function restoreEntry(entry) { state.entries.push(entry); sortEntries(); save(); }
-  function getEntry(id) { return state.entries.find(e => e.id === id) || null; }
-
-  /* ---- Words ---- */
-  function addWord(w) {
-    snapshot();
-    const word = { id: uid(), word: String(w.word || '').trim(), reading: String(w.reading || '').trim(), meaning: String(w.meaning || '').trim(), createdAt: nowISO() };
-    state.words.unshift(word); save(); return word;
-  }
-  function deleteWord(id) { const i = state.words.findIndex(w => w.id === id); if (i < 0) return null; const [r] = state.words.splice(i, 1); save(); return r; }
-
-  /* ---- Profile / settings ---- */
-  function setProfile(patch) { Object.assign(state.profile, patch); save(); }
-  function setGithub(patch) { Object.assign(state.github, patch); save(); }
-  function setLock(lock) { state.lock = lock && lock.hash ? lock : null; save(); }
-  function setDraft(draft) { state.draft = draft; try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {} }
-  function markEarned(ids) { let changed = false; ids.forEach(id => { if (!state.earned.includes(id)) { state.earned.push(id); changed = true; } }); if (changed) save(); return changed; }
-
-  /* ---- Export / import / merge ---- */
-  function exportPayload() {
-    const payload = { app: 'reyhane-diary', version: 1, exportedAt: nowISO(), profile: { name: state.profile.name }, entries: state.entries, words: state.words };
-    if (state.lock) payload.lock = state.lock;
-    return payload;
-  }
-  function parsePayload(obj) {
+  function normalizeWord(w) { return { id: w.id || uid(), word: String(w.word || '').trim(), reading: String(w.reading || '').trim(), meaning: String(w.meaning || '').trim(), createdAt: w.createdAt || nowISO(), updatedAt: w.updatedAt || w.createdAt || nowISO() }; }
+  function normalizeData(obj) {
     if (!obj || typeof obj !== 'object') return null;
-    const entries = Array.isArray(obj.entries) ? obj.entries.map(normalizeEntry) : [];
-    const words = Array.isArray(obj.words) ? obj.words.filter(w => w && w.word).map(w => ({ id: w.id || uid(), word: String(w.word), reading: String(w.reading || ''), meaning: String(w.meaning || ''), createdAt: w.createdAt || nowISO() })) : [];
     if (!Array.isArray(obj.entries) && !Array.isArray(obj.words)) return null;
-    const lock = obj.lock && typeof obj.lock.hash === 'string' && typeof obj.lock.salt === 'string' ? obj.lock : null;
-    return { entries, words, profile: obj.profile || null, lock };
+    const d = emptyData();
+    d.entries = (obj.entries || []).map(normalizeEntry);
+    d.words = (obj.words || []).filter(w => w && w.word).map(normalizeWord);
+    d.deleted = Array.isArray(obj.deleted) ? obj.deleted.filter(x => x && x.id).map(x => ({ id: String(x.id), at: x.at || nowISO(), kind: x.kind || 'entry' })) : [];
+    d.lock = obj.lock && typeof obj.lock.hash === 'string' && typeof obj.lock.salt === 'string' ? obj.lock : null;
+    if (obj.profile && obj.profile.name) d.profile.name = String(obj.profile.name).slice(0, 30);
+    d.updatedAt = obj.updatedAt || null;
+    sortEntries(d);
+    return d;
   }
-  /* newest updatedAt wins for same id */
-  function merge(payload) {
-    snapshot(true);
-    const byId = new Map(state.entries.map(e => [e.id, e]));
-    let added = 0;
-    payload.entries.forEach(e => {
-      const cur = byId.get(e.id);
-      if (!cur) { byId.set(e.id, e); added++; }
-      else if ((e.updatedAt || '') > (cur.updatedAt || '')) { byId.set(e.id, e); added++; }
-    });
-    state.entries = [...byId.values()]; sortEntries();
-    const wIds = new Set(state.words.map(w => w.id));
-    const wKeys = new Set(state.words.map(w => w.word + '|' + w.meaning));
-    payload.words.forEach(w => { if (!wIds.has(w.id) && !wKeys.has(w.word + '|' + w.meaning)) { state.words.push(w); added++; } });
-    if (payload.profile && payload.profile.name && !state.entries.length) state.profile.name = payload.profile.name;
-    if (payload.lock && !state.lock) state.lock = payload.lock; // adopt the owner's lock on a fresh device
-    save();
-    return added;
+  function sortEntries(d) { d.entries.sort((a, b) => (b.date + b.createdAt).localeCompare(a.date + a.createdAt)); }
+
+  /* Merge two data sets: newest updatedAt wins per id; tombstones remove items unless the item was updated after deletion. */
+  function mergeData(a, b) {
+    const out = emptyData();
+    const tomb = new Map();
+    [...(a.deleted || []), ...(b.deleted || [])].forEach(t => { const k = t.kind + ':' + t.id; if (!tomb.has(k) || tomb.get(k).at < t.at) tomb.set(k, t); });
+    const pick = (list, kind) => {
+      const m = new Map();
+      list.forEach(x => { const cur = m.get(x.id); if (!cur || (x.updatedAt || '') > (cur.updatedAt || '')) m.set(x.id, x); });
+      return [...m.values()].filter(x => { const t = tomb.get(kind + ':' + x.id); return !t || (x.updatedAt || '') > t.at; });
+    };
+    out.entries = pick([...a.entries, ...b.entries], 'entry');
+    out.words = pick([...a.words, ...b.words], 'word');
+    out.deleted = [...tomb.values()].filter(t => t.at > new Date(Date.now() - 180 * 864e5).toISOString()); // keep tombstones 180 days
+    const newer = (a.lock && a.lock.setAt || '') >= (b.lock && b.lock.setAt || '') ? a : b;
+    out.lock = newer.lock || a.lock || b.lock || null;
+    out.profile.name = (a.updatedAt || '') >= (b.updatedAt || '') ? (a.profile.name || b.profile.name) : (b.profile.name || a.profile.name);
+    out.updatedAt = [a.updatedAt, b.updatedAt].filter(Boolean).sort().pop() || null;
+    sortEntries(out);
+    return out;
   }
-  function wipe() {
-    const keep = { profile: state.profile, github: state.github, lock: state.lock };
-    state = { ...defaults(), ...keep, seeded: true };
-    save();
-  }
-  function storageKB() { try { return Math.round((localStorage.getItem(KEY) || '').length * 2 / 1024); } catch (e) { return 0; } }
+
+  /* ---- mutations (in memory; call Sync.save() to persist) ---- */
+  const touch = () => { state.data.updatedAt = nowISO(); state.dirty = true; emit(); };
+  function setData(d, meta = {}) { state.data = d; Object.assign(state, meta); state.loaded = true; state.dirty = false; emit(); }
+  function addEntry(data) { const e = normalizeEntry({ ...data, id: undefined, createdAt: undefined, updatedAt: undefined }); state.data.entries.push(e); sortEntries(state.data); touch(); return e; }
+  function updateEntry(id, data) { const i = state.data.entries.findIndex(e => e.id === id); if (i < 0) return null; const e = normalizeEntry({ ...state.data.entries[i], ...data, id, updatedAt: nowISO() }); state.data.entries[i] = e; sortEntries(state.data); touch(); return e; }
+  function deleteEntry(id) { const i = state.data.entries.findIndex(e => e.id === id); if (i < 0) return null; const [r] = state.data.entries.splice(i, 1); state.data.deleted.push({ id, at: nowISO(), kind: 'entry' }); touch(); return r; }
+  function restoreEntry(entry) { state.data.deleted = state.data.deleted.filter(t => !(t.kind === 'entry' && t.id === entry.id)); state.data.entries.push({ ...entry, updatedAt: nowISO() }); sortEntries(state.data); touch(); }
+  function getEntry(id) { return state.data.entries.find(e => e.id === id) || null; }
+  function addWord(w) { const word = normalizeWord({ ...w, id: undefined }); state.data.words.unshift(word); touch(); return word; }
+  function deleteWord(id) { const i = state.data.words.findIndex(w => w.id === id); if (i < 0) return null; const [r] = state.data.words.splice(i, 1); state.data.deleted.push({ id, at: nowISO(), kind: 'word' }); touch(); return r; }
+  function setLock(lock) { state.data.lock = lock && lock.hash ? lock : null; touch(); }
+  function setName(name) { state.data.profile.name = String(name || '').trim().slice(0, 30) || 'レイハーネ'; touch(); }
+  function wipe() { state.data.entries.forEach(e => state.data.deleted.push({ id: e.id, at: nowISO(), kind: 'entry' })); state.data.words.forEach(w => state.data.deleted.push({ id: w.id, at: nowISO(), kind: 'word' })); state.data.entries = []; state.data.words = []; touch(); }
+  function importData(obj) { const inc = normalizeData(obj); if (!inc) return null; const before = state.data.entries.length + state.data.words.length; state.data = mergeData(state.data, inc); touch(); return state.data.entries.length + state.data.words.length - before; }
+
+  /* ---- device settings ---- */
+  function setSettings(patch) { Object.assign(state.settings, patch); saveLS(SETTINGS_KEY, state.settings); emit(); }
+  function setGithub(patch) { Object.assign(state.github, patch); saveLS(GH_KEY, state.github); emit(); }
+  function setDraft(d) { try { d ? sessionStorage.setItem(DRAFT_KEY, JSON.stringify(d)) : sessionStorage.removeItem(DRAFT_KEY); } catch (e) {} }
+  function getDraft() { try { return JSON.parse(sessionStorage.getItem(DRAFT_KEY)); } catch (e) { return null; } }
+
+  function exportPayload() { return { ...clone(state.data), exportedAt: nowISO() }; }
 
   window.Store = {
-    get state() { return state; },
-    subscribe(fn) { listeners.add(fn); return () => listeners.delete(fn); },
-    save, uid, todayISO, nowISO,
-    addEntry, updateEntry, deleteEntry, restoreEntry, getEntry,
-    addWord, deleteWord,
-    setProfile, setGithub, setLock, setDraft, markEarned,
-    exportPayload, parsePayload, merge, wipe, snapshot, storageKB,
+    state, get data() { return state.data; }, get settings() { return state.settings; }, get github() { return state.github; },
+    subscribe(fn) { listeners.add(fn); return () => listeners.delete(fn); }, emit,
+    uid, todayISO, nowISO, clone, emptyData, normalizeData, mergeData, setData,
+    addEntry, updateEntry, deleteEntry, restoreEntry, getEntry, addWord, deleteWord, setLock, setName, wipe, importData,
+    setSettings, setGithub, setDraft, getDraft, exportPayload,
   };
 })();
