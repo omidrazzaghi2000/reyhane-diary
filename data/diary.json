@@ -6,6 +6,18 @@
   },
   "entries": [
     {
+      "id": "mvk11k86fxlouc",
+      "date": "2026-10-23",
+      "title": "",
+      "body": "hi itaktakimaos",
+      "mood": "fun",
+      "weather": "cloudy",
+      "tags": [],
+      "favorite": false,
+      "createdAt": "2026-10-22T21:02:18.534Z",
+      "updatedAt": "2026-10-22T21:02:18.534Z"
+    },
+    {
       "id": "welcome0001",
       "date": "2026-10-22",
       "title": "はじめてのにっき :sakura:",
@@ -54,6 +66,6 @@
     "iter": 2000,
     "setAt": "2026-10-23T00:00:00.000Z"
   },
-  "updatedAt": "2026-10-22T21:02:05.886Z",
-  "savedAt": "2026-10-22T21:02:05.886Z"
+  "updatedAt": "2026-10-22T21:02:19.123Z",
+  "savedAt": "2026-10-22T21:02:19.123Z"
 }
