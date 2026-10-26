@@ -1,0 +1,107 @@
+{
+  "app": "reyhane-diary",
+  "version": 2,
+  "profile": {
+    "name": "レイハーネ"
+  },
+  "entries": [
+    {
+      "id": "mvo7mfrxcmlqif",
+      "date": "2026-10-25",
+      "title": "(⌒0⌒)／~~",
+      "body": "きょう は5じ はんに、おきます。:tea:\nちょっとつかれました。\nまた書くね。おやすみなさい。:star:",
+      "mood": "sleepy",
+      "weather": "rainy",
+      "tags": [
+        "(-.-)Zzz・・・・"
+      ],
+      "favorite": false,
+      "createdAt": "2026-10-25T19:17:34.945Z",
+      "updatedAt": "2026-10-25T19:19:26.472Z"
+    },
+    {
+      "id": "mvmgrjjf0suxt3",
+      "date": "2026-10-24",
+      "title": "(^з^)-☆",
+      "body": "こにちわ！\nがこわいきます。\n(めんどこせ！)\nあさごはんおたべます。(*＞∇＜)ﾉ:fuji:\n",
+      "mood": "calm",
+      "weather": "rainy",
+      "tags": [
+        "(めんどこせ！)"
+      ],
+      "favorite": false,
+      "createdAt": "2026-10-24T13:57:57.294Z",
+      "updatedAt": "2026-10-25T19:20:58.988Z"
+    },
+    {
+      "id": "mvk4t80ckoxl70",
+      "date": "2026-10-23",
+      "title": "ほんとアニメ",
+      "body": "さいきん よんだ ほんや みた アニメは？\nほん:すすめの ねこちゃん\nアニメ: Bell\n",
+      "mood": "fun",
+      "weather": "cloudy",
+      "tags": [
+        "。アニメ。 ほん"
+      ],
+      "favorite": false,
+      "createdAt": "2026-10-22T22:47:47.919Z",
+      "updatedAt": "2026-10-26T15:03:58.362Z"
+    },
+    {
+      "id": "welcome0001",
+      "date": "2026-10-22",
+      "title": "はじめてのにっき :sakura:",
+      "body": "こんにちは！わたしは レイハーネです。\nきょうから にほんごで にっきを かきます。\nたのしみ！ (๑˃̵ᴗ˂̵) :neko:",
+      "mood": "happy",
+      "weather": "rainy",
+      "tags": [
+        "はじめて"
+      ],
+      "favorite": true,
+      "createdAt": "2026-10-22T00:00:00.000Z",
+      "updatedAt": "2026-10-22T22:50:29.732Z"
+    }
+  ],
+  "words": [
+    {
+      "id": "w0001",
+      "word": "日記",
+      "reading": "にっき",
+      "meaning": "diary / دفتر خاطرات",
+      "createdAt": "2026-10-22T00:00:00.000Z",
+      "updatedAt": "2026-10-22T00:00:00.000Z"
+    },
+    {
+      "id": "w0002",
+      "word": "桜",
+      "reading": "さくら",
+      "meaning": "cherry blossom / شکوفه گیلاس",
+      "createdAt": "2026-10-22T00:00:00.000Z",
+      "updatedAt": "2026-10-22T00:00:00.000Z"
+    },
+    {
+      "id": "w0003",
+      "word": "楽しい",
+      "reading": "たのしい",
+      "meaning": "fun / شاد، خوش",
+      "createdAt": "2026-10-22T00:00:00.000Z",
+      "updatedAt": "2026-10-22T00:00:00.000Z"
+    }
+  ],
+  "deleted": [
+    {
+      "id": "mvk11k86fxlouc",
+      "at": "2026-10-22T21:03:37.074Z",
+      "kind": "entry"
+    }
+  ],
+  "lock": {
+    "salt": "bce770ed0dd131307a843e8c",
+    "hash": "5b328545f7513f31cd3afdda8fc9c99caab3189361a80c767ae9fd1e9d222064",
+    "hint": "4つの おなじ すうじ",
+    "iter": 2000,
+    "setAt": "2026-10-23T00:00:00.000Z"
+  },
+  "updatedAt": "2026-10-26T15:03:59.477Z",
+  "savedAt": "2026-10-26T15:03:59.477Z"
+}
