@@ -4,6 +4,7 @@ Automatic snapshots of `data/diary.json`.
 
 | file | entries | words |
 |---|---|---|
+| diary-2026-11-15.json | 6 | 4 |
 | diary-2026-11-08.json | 6 | 4 |
 | diary-2026-11-01.json | 4 | 3 |
 | diary-2026-10-25.json | 3 | 3 |
